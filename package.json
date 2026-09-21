@@ -1,0 +1,25 @@
+{
+  "name": "mc-mod-launcher",
+  "version": "0.1.0",
+  "description": "Launcher Minecraft moddé (Forge en priorité)",
+  "main": "./out/main/index.js",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "start": "electron-vite preview",
+    "typecheck": "tsc --noEmit",
+    "cli": "tsx scripts/cli.mts"
+  },
+  "devDependencies": {
+    "@types/adm-zip": "^0.5.8",
+    "@types/node": "^26.6.2",
+    "electron": "^44.4.3",
+    "electron-vite": "^5.0.0",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vite": "^7.3.6"
+  },
+  "dependencies": {
+    "adm-zip": "^0.6.1"
+  }
+}

@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'" />
+    <title>MC Mod Launcher</title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <main>
+      <h1>MC Mod Launcher</h1>
+      <section class="row">
+        <label>Pseudo <input id="username" value="Player" maxlength="16" /></label>
+        <label>Version <select id="version"></select></label>
+        <label class="check"><input type="checkbox" id="snapshots" /> Snapshots</label>
+        <button id="play">Jouer</button>
+      </section>
+      <div class="bar"><div id="fill"></div></div>
+      <div id="status">Prêt</div>
+      <pre id="log"></pre>
+    </main>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>
