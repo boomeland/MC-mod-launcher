@@ -33,10 +33,10 @@
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
-      "artifactName": "MC-Mod-Launcher-Setup-${version}.${ext}"
+      "artifactName": "MC-Mod-Launcher-Setup.${ext}"
     },
     "portable": {
-      "artifactName": "MC-Mod-Launcher-${version}-portable.${ext}"
+      "artifactName": "MC-Mod-Launcher-Portable.${ext}"
     }
   },
   "devDependencies": {
