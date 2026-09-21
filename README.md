@@ -2,7 +2,7 @@
 
 Un launcher Minecraft Java fait maison, pour remplacer le launcher officiel. Le but final : lancer du Minecraft **moddé (Forge en priorité)**.
 
-> État actuel : le vanilla se lance, l'auth Microsoft est codée mais pas encore testée de bout en bout, Forge n'est pas commencé.
+> État actuel : le vanilla et Forge se lancent (testés en 1.20.1 et 1.12.2). L'auth Microsoft marche jusqu'à l'étape finale et attend l'approbation de Mojang.
 
 ## Technos utilisées
 
@@ -27,7 +27,7 @@ cp .env.example .env    # puis renseigner MAIN_VITE_MSA_CLIENT_ID (voir "Connexi
 npm run dev             # app Electron en mode dev
 npm run build           # compile dans out/
 npm run typecheck       # vérification TypeScript
-npm run cli -- 1.21.1 [pseudo] [--dry]   # teste le cœur sans interface
+npm run cli -- 1.20.1 [pseudo] [--forge[=version]] [--dry]   # teste le cœur sans interface
 ```
 
 Avec `--dry`, le CLI installe la version et affiche seulement la commande de lancement. Ses données vont dans `.cli-data/` (ignoré par git).
@@ -52,9 +52,19 @@ Choix de la version
 3. **Authentification.** Voir la section suivante.
 4. **Lancement.** Le launcher assemble le classpath (librairies et client.jar), remplace les variables du JSON (`${auth_player_name}`, `${assets_root}`…) et lance `java` en processus enfant. Ses sorties sont renvoyées à l'interface.
 
-### Héritage de versions (prépare Forge)
+### Forge
 
-Forge et Fabric ne remplacent pas Minecraft : leur JSON déclare `inheritsFrom: "1.20.1"`. Le launcher fusionne le JSON enfant avec celui du parent (librairies, arguments) et garde le `client.jar` du vanilla. C'est déjà en place, mais pas encore testé avec un vrai JSON Forge.
+Forge ne remplace pas Minecraft : il s'installe *par-dessus*. Le launcher :
+
+1. installe d'abord le vanilla (et son Java Mojang) ;
+2. télécharge l'**installer officiel** de Forge depuis `maven.minecraftforge.net` et le lance en mode headless (`--installClient`) avec ce Java. C'est lui qui patche le jeu (« processors ») et crée `versions/<mc>-forge-<x>/` ;
+3. lance cette nouvelle version.
+
+Le JSON de Forge déclare `inheritsFrom: "1.20.1"` : le launcher le fusionne avec celui du vanilla (librairies, arguments). Deux détails importants :
+- Le jar vanilla est **copié** sous le nom de la version lancée (`<id>/<id>.jar`), car Forge l'ignore par ce nom via `-DignoreList`. Sans ça, le jeu plante au démarrage (conflit de modules Java).
+- Les librairies à URL vide (générées par l'installer) ne sont pas téléchargées.
+
+Les versions Forge proposées viennent de `maven-metadata.xml` et de `promotions_slim.json` (versions recommandée / dernière). Un fichier `.installed-by-launcher` marque une installation terminée, ce qui évite de relancer l'installer.
 
 ### Connexion Microsoft
 
@@ -82,10 +92,29 @@ src/
 │   ├── java.ts        télécharge le runtime Java Mojang
 │   ├── launch.ts      construit la commande et lance le jeu
 │   ├── auth.ts        compte hors-ligne
-│   └── msa.ts         connexion Microsoft / Xbox / Minecraft
-├── main/        Process principal Electron (fenêtre, IPC, stockage du compte)
+│   ├── forge/         Forge
+│   │   ├── versions.ts    liste des versions (maven-metadata + promotions)
+│   │   ├── installer.ts   lance l'installer officiel en headless
+│   │   └── index.ts       installForge() : vanilla → installer → marqueur
+│   └── msa/           Connexion Microsoft
+│       ├── oauth.ts       device code flow, refresh
+│       ├── minecraft.ts   Xbox Live → XSTS → Minecraft Services → profil
+│       ├── http.ts        POST form / JSON
+│       ├── errors.ts      AuthError + messages lisibles (XErr, 403 Mojang)
+│       └── index.ts       loginWithDeviceCode(), loginWithRefreshToken()
+├── main/        Process principal Electron
+│   ├── index.ts       démarrage : enregistre les IPC, ouvre la fenêtre
+│   ├── window.ts      création de la fenêtre
+│   ├── config.ts      client_id Microsoft (.env) et dossier de jeu
+│   ├── accounts.ts    stockage chiffré du refresh token
+│   └── ipc/           un fichier par domaine : versions.ts, auth.ts, game.ts
 ├── preload/     Pont sécurisé entre l'interface et le main (window.launcher)
-├── renderer/    Interface (HTML, CSS, TypeScript)
+├── renderer/    Interface, un module par zone
+│   ├── main.ts        point d'entrée
+│   ├── versions.ts    version de MC, loader, version Forge
+│   ├── account.ts     connexion Microsoft / hors-ligne
+│   ├── play.ts        bouton Jouer, progression, logs
+│   └── status.ts, dom.ts   helpers (statut, barre, console, sélecteur)
 └── shared/      Types partagés entre main et renderer
 scripts/cli.mts  Lancement en ligne de commande, sans interface
 ```
@@ -102,16 +131,18 @@ Les données du jeu sont dans le dossier `userData` d'Electron (`%APPDATA%/mc-mo
 - [x] Interface : choix de version (releases et snapshots), pseudo, progression, logs du jeu
 - [x] Mode hors-ligne
 - [x] Fusion des versions par héritage (`inheritsFrom`)
-- [x] Code de l'auth Microsoft complet (device code, refresh, stockage chiffré)
+- [x] **Forge** : installation via l'installer officiel et lancement, testé en 1.20.1 (Java 17, format récent) et 1.12.2 (Java 8, ancien format) via le CLI
+- [x] Interface : choix Vanilla / Forge et de la version Forge (recommandée par défaut)
+- [x] Auth Microsoft : device code, Xbox Live et XSTS validés contre les vrais serveurs
 
 ### Codé mais non testé
-- [ ] Auth Microsoft de bout en bout (il faut le `client_id` de l'app Azure, et l'approbation Mojang)
+- [ ] Auth Microsoft, étape finale `login_with_xbox` (403 tant que Mojang n'a pas approuvé l'app Azure)
 - [ ] Reconnexion automatique après redémarrage (refresh token)
 - [ ] Lancement depuis l'interface Electron (seul le CLI a été testé jusqu'au jeu lancé)
 
 ### À faire
-- [ ] **Forge / NeoForge** : installer une version et exécuter les « processors » de l'installer (piste : lancer l'installer officiel en headless avec le Java Mojang)
-- [ ] **Instances** : un dossier de jeu par profil (mods, saves, options séparés) et un choix de mémoire par instance
+- [ ] **NeoForge** (installer différent, même principe)
+- [ ] **Instances** : un dossier de jeu par profil (mods, saves, options séparés) et un choix de mémoire par instance. Aujourd'hui tout partage un seul dossier : les mods de Forge 1.12.2 et ceux de 1.20.1 se mélangeraient, et `options.txt` est partagé entre versions.
 - [ ] **Gestion des mods** : ajout, suppression, activation
 - [ ] **Modpacks** : Modrinth (`.mrpack`) puis CurseForge (clé API requise)
 - [ ] Fabric / Quilt (plus simple : un JSON à récupérer)
