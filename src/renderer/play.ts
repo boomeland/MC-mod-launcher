@@ -1,10 +1,18 @@
-// Bouton Jouer, progression des téléchargements et logs du jeu.
+// Bouton Jouer, progression des téléchargements (barre d'état) et logs du jeu.
 import { $ } from './dom'
+import { getSelectedInstance, setBusy, showTab } from './instances'
 import { appendLog, clearLog, setProgress, setStatus } from './status'
-import { getSelection } from './versions'
 
 const playBtn = $<HTMLButtonElement>('play')
+const playLabel = $('play-label')
 const usernameIn = $<HTMLInputElement>('username')
+
+/** Le bouton porte l'état de la partie : prêt, en préparation (téléchargements), en jeu. */
+function setPlayState(state: 'ready' | 'preparing' | 'running') {
+  playBtn.disabled = state !== 'ready'
+  playLabel.textContent = { ready: 'Jouer', preparing: 'Préparation…', running: 'En jeu' }[state]
+  setBusy(state !== 'ready')
+}
 
 export function initPlay() {
   window.launcher.onProgress((p) => {
@@ -13,25 +21,24 @@ export function initPlay() {
   })
   window.launcher.onLog(appendLog)
   window.launcher.onExit((code) => {
-    setStatus(`Jeu fermé (code ${code})`)
-    playBtn.disabled = false
+    setStatus(code === 0 ? 'Jeu fermé' : `Jeu fermé (code ${code})`)
+    setPlayState('ready')
   })
 
   playBtn.addEventListener('click', async () => {
-    const selection = getSelection()
-    if (!selection) {
-      setStatus('Aucune version Forge sélectionnée')
-      return
-    }
-    playBtn.disabled = true
+    const instance = getSelectedInstance()
+    if (!instance) return
+    setPlayState('preparing')
+    showTab('console')
     clearLog()
     try {
-      await window.launcher.play({ ...selection, offlineName: usernameIn.value.trim() || 'Player' })
-      setStatus('Jeu lancé')
+      await window.launcher.play({ instanceId: instance.id, offlineName: usernameIn.value.trim() || 'Player' })
+      setPlayState('running')
+      setStatus(`${instance.name} est lancé`)
       setProgress(1)
     } catch (e) {
       setStatus(`Erreur : ${(e as Error).message}`)
-      playBtn.disabled = false
+      setPlayState('ready')
     }
   })
 }

@@ -1,5 +1,6 @@
 import { ipcMain } from 'electron'
-import { listForgeVersions } from '../../core/forge'
+import { LOADERS } from '../../core/loaders'
+import { isModLoader } from '../../core/types'
 import { fetchVersionList } from '../../core/version'
 
 export function registerVersionsIpc() {
@@ -11,5 +12,8 @@ export function registerVersionsIpc() {
     }
   })
 
-  ipcMain.handle('forge:versions', (_e, mcVersion: string) => listForgeVersions(mcVersion))
+  ipcMain.handle('loader:versions', (_e, loader: unknown, mcVersion: string) => {
+    if (!isModLoader(loader)) throw new Error(`Loader inconnu : ${String(loader)}`)
+    return LOADERS[loader].listVersions(mcVersion)
+  })
 }

@@ -14,11 +14,26 @@ export function setProgress(ratio: number) {
   fill.style.width = `${ratio * 100}%`
 }
 
-export function appendLog(line: string) {
-  log.append(line + '\n')
+// Un modpack écrit des dizaines de milliers de lignes. Ajouter chaque ligne au DOM puis défiler forçait un recalcul
+// de mise en page par ligne, sur un texte qui ne faisait que grossir : renderer à 5 Go, interface figée (vécu).
+// On regroupe donc l'affichage par image, et on ne garde que la fin du log (le fichier complet est dans logs/).
+const MAX_LOG_CHARS = 200_000
+let pending: string[] = []
+
+function flushLog() {
+  if (pending.length === 0) return // clearLog() est passé entre la programmation et l'exécution
+  const text = `${log.textContent}${pending.join('\n')}\n`
+  pending = []
+  log.textContent = text.length > MAX_LOG_CHARS ? text.slice(-MAX_LOG_CHARS) : text
   log.scrollTop = log.scrollHeight
 }
 
+export function appendLog(line: string) {
+  if (pending.length === 0) requestAnimationFrame(flushLog)
+  pending.push(line)
+}
+
 export function clearLog() {
+  pending = []
   log.textContent = ''
 }

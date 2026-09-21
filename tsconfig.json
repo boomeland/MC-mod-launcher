@@ -11,5 +11,5 @@
     "noEmit": true,
     "isolatedModules": true
   },
-  "include": ["src", "scripts", "electron.vite.config.ts"]
+  "include": ["src", "scripts", "tests", "electron.vite.config.ts"]
 }

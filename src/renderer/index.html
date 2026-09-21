@@ -2,43 +2,206 @@
 <html lang="fr">
   <head>
     <meta charset="UTF-8" />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'" />
+    <!-- img-src : seules les images des modpacks FTB (leur CDN) sont chargées depuis l'extérieur. -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' https://cdn.feed-the-beast.com"
+    />
     <title>MC Mod Launcher</title>
     <link rel="stylesheet" href="./style.css" />
   </head>
   <body>
-    <main>
-      <h1>MC Mod Launcher</h1>
-      <section class="row" id="account">
-        <div class="row" id="account-out">
-          <button id="login" class="secondary">Connexion Microsoft</button>
-          <label>Pseudo hors-ligne <input id="username" value="Player" maxlength="16" /></label>
+    <div class="app">
+      <aside class="sidebar">
+        <div class="brand">
+          <svg viewBox="0 0 24 24" class="brand-mark"><path d="M12 2 3 7v10l9 5 9-5V7z" /><path d="m3 7 9 5 9-5M12 12v10" /></svg>
+          <span>MC Mod Launcher</span>
         </div>
-        <div class="row" id="account-pending" hidden>
-          <span>Code <strong id="code"></strong> à saisir sur <span id="uri"></span></span>
-          <button id="cancel" class="secondary">Annuler</button>
+
+        <nav class="nav">
+          <button class="nav-item active" id="nav-library">
+            <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" /><rect x="3" y="14" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" /></svg>
+            Bibliothèque
+          </button>
+          <button class="nav-item" id="nav-discover">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><path d="m15.5 8.5-2 5-5 2 2-5z" /></svg>
+            Modpacks FTB
+          </button>
+        </nav>
+
+        <div class="section-title">
+          <span>Instances</span>
+          <button id="new-instance" class="icon-btn" title="Nouvelle instance">
+            <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" /></svg>
+          </button>
         </div>
-        <div class="row" id="account-in" hidden>
-          <span>Connecté : <strong id="account-name"></strong></span>
-          <button id="logout" class="secondary">Déconnexion</button>
+        <ul id="instance-list" class="instance-list"></ul>
+
+        <section class="account">
+          <div id="account-out">
+            <div class="account-row">
+              <div class="avatar" id="avatar">P</div>
+              <label class="account-name">
+                <span class="tiny">Pseudo hors-ligne</span>
+                <input id="username" value="Player" maxlength="16" spellcheck="false" />
+              </label>
+            </div>
+            <button id="login" class="btn btn-block btn-soft">
+              <svg viewBox="0 0 24 24" class="ms-logo"><path fill="#f25022" d="M3 3h8.5v8.5H3z" /><path fill="#7fba00" d="M12.5 3H21v8.5h-8.5z" /><path fill="#00a4ef" d="M3 12.5h8.5V21H3z" /><path fill="#ffb900" d="M12.5 12.5H21V21h-8.5z" /></svg>
+              Connexion Microsoft
+            </button>
+          </div>
+          <div id="account-pending" class="account-pending" hidden>
+            <span class="tiny">Saisis ce code sur <span id="uri"></span></span>
+            <strong id="code"></strong>
+            <button id="cancel" class="btn btn-block btn-soft">Annuler</button>
+          </div>
+          <div id="account-in" class="account-row" hidden>
+            <div class="avatar avatar-ms" id="avatar-ms"></div>
+            <div class="account-name">
+              <span class="tiny">Compte Microsoft</span>
+              <strong id="account-name"></strong>
+            </div>
+            <button id="logout" class="icon-btn" title="Déconnexion">
+              <svg viewBox="0 0 24 24"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 17l5-5-5-5M15 12H4" /></svg>
+            </button>
+          </div>
+        </section>
+      </aside>
+
+      <main class="main">
+        <section id="view-empty" class="view empty-view" hidden>
+          <svg viewBox="0 0 24 24" class="empty-mark"><path d="M12 2 3 7v10l9 5 9-5V7z" /><path d="m3 7 9 5 9-5M12 12v10" /></svg>
+          <h1>Bienvenue</h1>
+          <p class="muted">Crée ta première instance, ou installe un modpack FTB en un clic.</p>
+          <div class="row">
+            <button id="empty-create" class="btn btn-primary">Nouvelle instance</button>
+            <button id="empty-discover" class="btn btn-soft">Parcourir les modpacks FTB</button>
+          </div>
+        </section>
+
+        <section id="view-instance" class="view" hidden>
+          <header class="hero">
+            <div class="hero-bg" id="hero-bg"></div>
+            <div class="hero-content">
+              <div id="hero-tile"></div>
+              <div class="hero-text">
+                <h1 id="inst-name"></h1>
+                <div class="chips" id="inst-chips"></div>
+              </div>
+              <div class="hero-actions">
+                <button id="open-folder" class="icon-btn icon-btn-lg" title="Ouvrir le dossier du jeu">
+                  <svg viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /></svg>
+                </button>
+                <button id="play" class="btn-play">
+                  <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
+                  <span id="play-label">Jouer</span>
+                </button>
+              </div>
+            </div>
+          </header>
+
+          <div class="tabs">
+            <button class="tab active" data-tab="console">Console</button>
+            <button class="tab" data-tab="settings">Réglages</button>
+          </div>
+
+          <div class="tab-panel" id="tab-console">
+            <pre id="log" class="console"></pre>
+          </div>
+
+          <div class="tab-panel settings" id="tab-settings" hidden>
+            <div class="card">
+              <h3>Nom</h3>
+              <input id="inst-rename" maxlength="60" />
+            </div>
+            <div class="card">
+              <h3>Mémoire allouée <span class="value" id="inst-memory-label"></span></h3>
+              <input id="inst-memory" type="range" min="1024" max="16384" step="512" />
+              <div class="range-scale"><span>1 Go</span><span>16 Go</span></div>
+            </div>
+            <div class="card card-danger">
+              <div>
+                <h3>Supprimer l'instance</h3>
+                <p class="muted">Mondes, mods et réglages de cette instance seront effacés définitivement.</p>
+              </div>
+              <button id="delete" class="btn btn-danger">
+                <svg viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3" /></svg>
+                Supprimer
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <section id="view-discover" class="view discover" hidden>
+          <header class="page-header">
+            <div>
+              <h1>Modpacks FTB</h1>
+              <p class="muted" id="ftb-count">Chargement du catalogue…</p>
+            </div>
+            <label class="search">
+              <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
+              <input id="ftb-search" placeholder="Rechercher un modpack…" spellcheck="false" />
+            </label>
+          </header>
+          <div class="filters" id="ftb-filters">
+            <button class="chip-btn active" data-loader="">Tous</button>
+            <button class="chip-btn" data-loader="neoforge">NeoForge</button>
+            <button class="chip-btn" data-loader="forge">Forge</button>
+            <button class="chip-btn" data-loader="fabric">Fabric</button>
+            <label class="check"><input type="checkbox" id="ftb-unsupported" /> Afficher les packs non pris en charge</label>
+          </div>
+          <div class="grid" id="ftb-grid"></div>
+        </section>
+
+        <footer class="statusbar">
+          <span id="status">Prêt</span>
+          <div class="bar"><div id="fill"></div></div>
+        </footer>
+      </main>
+    </div>
+
+    <dialog id="create-dialog" class="modal">
+      <form id="create-form" class="modal-body">
+        <h2>Nouvelle instance</h2>
+        <label>Nom <input id="new-name" maxlength="60" placeholder="ex. Mon modpack" /></label>
+        <div class="form-row">
+          <label>Version de Minecraft <select id="version"></select></label>
+          <label class="check"><input type="checkbox" id="snapshots" /> Snapshots</label>
         </div>
-      </section>
-      <section class="row">
-        <label>Version <select id="version"></select></label>
-        <label class="check"><input type="checkbox" id="snapshots" /> Snapshots</label>
-        <label>Loader
-          <select id="loader">
-            <option value="vanilla">Vanilla</option>
-            <option value="forge">Forge</option>
-          </select>
-        </label>
-        <label id="forge-wrap" hidden>Version Forge <select id="forge"></select></label>
-        <button id="play">Jouer</button>
-      </section>
-      <div class="bar"><div id="fill"></div></div>
-      <div id="status">Prêt</div>
-      <pre id="log"></pre>
-    </main>
+        <fieldset class="segmented" id="loader-group">
+          <legend>Loader</legend>
+          <label><input type="radio" name="loader" value="vanilla" checked /><span>Vanilla</span></label>
+          <label><input type="radio" name="loader" value="forge" /><span>Forge</span></label>
+          <label><input type="radio" name="loader" value="neoforge" /><span>NeoForge</span></label>
+          <label><input type="radio" name="loader" value="fabric" /><span>Fabric</span></label>
+        </fieldset>
+        <label id="loader-version-wrap" hidden><span id="loader-version-label"></span> <select id="loader-version"></select></label>
+        <label>RAM (Mo) <input id="new-memory" type="number" min="512" max="32768" step="512" value="2048" /></label>
+        <div class="actions">
+          <button type="button" id="create-cancel" class="btn btn-soft">Annuler</button>
+          <button type="submit" id="create-submit" class="btn btn-primary">Créer</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="ftb-dialog" class="modal modal-wide">
+      <div class="modal-banner" id="ftb-banner"><div id="ftb-icon"></div></div>
+      <form id="ftb-form" class="modal-body">
+        <h2 id="ftb-name"></h2>
+        <p class="muted" id="ftb-synopsis"></p>
+        <div class="form-row">
+          <label class="grow">Version <select id="ftb-version"></select></label>
+          <label>RAM (Mo) <input id="ftb-memory" type="number" min="512" max="32768" step="512" /></label>
+        </div>
+        <p class="tiny" id="ftb-ram-hint"></p>
+        <div class="actions">
+          <button type="button" id="ftb-cancel" class="btn btn-soft">Annuler</button>
+          <button type="submit" id="ftb-submit" class="btn btn-primary">Installer</button>
+        </div>
+      </form>
+    </dialog>
+
     <script type="module" src="./main.ts"></script>
   </body>
 </html>

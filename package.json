@@ -2,18 +2,48 @@
   "name": "mc-mod-launcher",
   "version": "0.1.0",
   "description": "Launcher Minecraft moddé (Forge en priorité)",
+  "author": "boomeland",
   "main": "./out/main/index.js",
   "scripts": {
     "dev": "electron-vite dev",
     "build": "electron-vite build",
     "start": "electron-vite preview",
     "typecheck": "tsc --noEmit",
-    "cli": "tsx scripts/cli.mts"
+    "cli": "tsx scripts/cli.mts",
+    "test": "tsx --test tests/*.test.mts",
+    "dist": "electron-vite build && electron-builder --win"
+  },
+  "build": {
+    "appId": "com.boomeland.mcmodlauncher",
+    "productName": "MC Mod Launcher",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "out/**/*"
+    ],
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ],
+      "icon": "build/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "artifactName": "MC-Mod-Launcher-Setup-${version}.${ext}"
+    },
+    "portable": {
+      "artifactName": "MC-Mod-Launcher-${version}-portable.${ext}"
+    }
   },
   "devDependencies": {
     "@types/adm-zip": "^0.5.8",
     "@types/node": "^26.6.2",
     "electron": "^44.4.3",
+    "electron-builder": "^26.15.3",
     "electron-vite": "^5.0.0",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2",

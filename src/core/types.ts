@@ -56,6 +56,13 @@ export interface Progress {
 
 export type ProgressFn = (p: Progress) => void
 
+/** Loaders de mods gérés. Vanilla n'en fait pas partie : il n'a ni versions propres ni installation en plus. */
+export const MOD_LOADERS = ['forge', 'neoforge', 'fabric'] as const
+export type ModLoader = (typeof MOD_LOADERS)[number]
+
+/** Garde pour les entrées non fiables (IPC, fichiers) avant d'indexer LOADERS avec. */
+export const isModLoader = (x: unknown): x is ModLoader => (MOD_LOADERS as readonly unknown[]).includes(x)
+
 export interface Account {
   name: string
   uuid: string
