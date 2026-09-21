@@ -1,14 +1,17 @@
 import { ipcMain } from 'electron'
 import type { ChildProcess } from 'node:child_process'
+import { mkdir } from 'node:fs/promises'
 import { offlineAccount } from '../../core/auth'
-import { installForge } from '../../core/forge'
+import { getInstance, instanceGameDir } from '../../core/instances'
 import { installVersion } from '../../core/install'
 import { buildLaunchCommand, spawnGame } from '../../core/launch'
+import { LOADERS } from '../../core/loaders'
+import { createLogDecoder } from '../../core/log4j'
 import { loginWithRefreshToken } from '../../core/msa'
 import type { Account, Progress } from '../../core/types'
 import type { PlayOptions } from '../../shared/api'
 import { loadAccount, saveAccount } from '../accounts'
-import { MSA_CLIENT_ID, paths } from '../config'
+import { INSTANCES_DIR, MSA_CLIENT_ID, paths } from '../config'
 
 let running = false
 
@@ -21,27 +24,38 @@ async function resolveAccount(offlineName: string): Promise<Account> {
   return r.account
 }
 
+/** Un décodeur par flux : un événement XML coupé entre deux morceaux ne doit pas se mélanger à l'autre flux. */
 function forwardLogs(proc: ChildProcess, send: (line: string) => void) {
-  const forward = (d: Buffer) => d.toString().split(/\r?\n/).filter(Boolean).forEach(send)
-  proc.stdout!.on('data', forward)
-  proc.stderr!.on('data', forward)
+  for (const stream of [proc.stdout!, proc.stderr!]) {
+    const decode = createLogDecoder()
+    stream.on('data', (d: Buffer) => decode(d.toString()).forEach(send))
+  }
 }
 
 export function registerGameIpc() {
-  ipcMain.handle('game:play', async (e, { mcVersion, forgeVersion, offlineName }: PlayOptions) => {
+  ipcMain.handle('game:play', async (e, { instanceId, offlineName }: PlayOptions) => {
     if (running) throw new Error('Une partie est déjà en cours')
     running = true
     const send = (channel: string, payload: unknown) => e.sender.send(channel, payload)
     try {
+      const instance = await getInstance(INSTANCES_DIR, instanceId)
+      const gameDir = instanceGameDir(INSTANCES_DIR, instanceId)
+      await mkdir(gameDir, { recursive: true })
+
       const onProgress = (p: Progress) => send('game:progress', p)
-      // Forge : l'installer crée une version "<mc>-forge-<x>" qui hérite du vanilla.
-      const versionId = forgeVersion
-        ? await installForge(paths, mcVersion, forgeVersion, onProgress, (l) => send('game:log', `[forge] ${l}`))
-        : mcVersion
+      // Un loader crée sa propre version (ex. "1.20.1-forge-47.3.0") qui hérite du vanilla.
+      const versionId =
+        instance.loader === 'vanilla'
+          ? instance.mcVersion
+          : await LOADERS[instance.loader].install(paths, instance.mcVersion, instance.loaderVersion, onProgress, (l) =>
+              send('game:log', `[${instance.loader}] ${l}`)
+            )
       const { resolved, javaPath } = await installVersion(paths, versionId, onProgress)
       const account = await resolveAccount(offlineName)
 
-      const proc = spawnGame(buildLaunchCommand(paths, resolved, { versionId, account, javaPath, gameDir: paths.root }))
+      const proc = spawnGame(
+        buildLaunchCommand(paths, resolved, { versionId, account, javaPath, gameDir, maxMemoryMb: instance.memoryMb })
+      )
       forwardLogs(proc, (line) => send('game:log', line))
       proc.on('exit', (code) => {
         running = false
