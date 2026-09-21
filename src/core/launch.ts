@@ -5,6 +5,7 @@ import type { GamePaths } from './paths'
 import { rulesAllow } from './rules'
 import type { Account, Argument } from './types'
 import type { ResolvedVersion } from './version'
+import pkg from '../../package.json'
 
 export interface LaunchOptions {
   versionId: string
@@ -17,7 +18,8 @@ export interface LaunchOptions {
 }
 
 const LAUNCHER_NAME = 'mc-mod-launcher'
-const LAUNCHER_VERSION = '0.1.0'
+// Lue dans package.json, seule source de la version : une release ne peut plus annoncer une version périmée au jeu.
+const LAUNCHER_VERSION = pkg.version
 
 function flatten(args: Argument[] | undefined): string[] {
   const out: string[] = []
