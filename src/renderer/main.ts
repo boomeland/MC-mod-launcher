@@ -18,12 +18,53 @@ const log = $('log')
 let all: VersionInfo[] = []
 let latest = ''
 
+const loaderSel = $<HTMLSelectElement>('loader')
+const forgeSel = $<HTMLSelectElement>('forge')
+const forgeWrap = $('forge-wrap')
+
 function renderVersions() {
   const shown = all.filter((v) => v.type === 'release' || (snapshots.checked && v.type === 'snapshot'))
   const prev = versionSel.value || latest
   versionSel.replaceChildren(...shown.map((v) => new Option(v.id, v.id)))
   if (shown.some((v) => v.id === prev)) versionSel.value = prev
+  void renderForge()
 }
+
+let forgeRequest = 0 // ignore les réponses périmées si l'utilisateur change vite de version
+
+async function renderForge() {
+  const useForge = loaderSel.value === 'forge'
+  forgeWrap.hidden = !useForge
+  playBtn.disabled = false
+  if (!useForge) return
+
+  const mc = versionSel.value
+  const req = ++forgeRequest
+  forgeSel.replaceChildren(new Option('Chargement…', ''))
+  playBtn.disabled = true
+  try {
+    const list = await window.launcher.listForgeVersions(mc)
+    if (req !== forgeRequest) return
+    const label = (full: string) => {
+      const tag = full === list.recommended ? ' (recommandée)' : full === list.latest ? ' (dernière)' : ''
+      return new Option(full.slice(mc.length + 1) + tag, full)
+    }
+    if (list.versions.length === 0) {
+      forgeSel.replaceChildren(new Option(`Aucun Forge pour ${mc}`, ''))
+      return
+    }
+    forgeSel.replaceChildren(...list.versions.map(label))
+    forgeSel.value = list.recommended ?? list.latest ?? list.versions[0]
+    playBtn.disabled = false
+  } catch (e) {
+    if (req !== forgeRequest) return
+    forgeSel.replaceChildren(new Option('Erreur de chargement', ''))
+    status.textContent = `Erreur : ${(e as Error).message}`
+  }
+}
+
+loaderSel.addEventListener('change', () => void renderForge())
+versionSel.addEventListener('change', () => void renderForge())
 
 function appendLog(line: string) {
   log.append(line + '\n')
@@ -77,10 +118,19 @@ $('logout').addEventListener('click', async () => {
 window.launcher.getAccount().then((name) => showAccount(name))
 
 playBtn.addEventListener('click', async () => {
+  const forgeVersion = loaderSel.value === 'forge' ? forgeSel.value : undefined
+  if (loaderSel.value === 'forge' && !forgeVersion) {
+    status.textContent = 'Aucune version Forge sélectionnée'
+    return
+  }
   playBtn.disabled = true
   log.textContent = ''
   try {
-    await window.launcher.play(versionSel.value, usernameIn.value.trim() || 'Player')
+    await window.launcher.play({
+      mcVersion: versionSel.value,
+      forgeVersion,
+      offlineName: usernameIn.value.trim() || 'Player'
+    })
     status.textContent = 'Jeu lancé'
     fill.style.width = '100%'
   } catch (e) {

@@ -33,11 +33,11 @@ function substitute(args: string[], vars: Record<string, string>): string[] {
 }
 
 export function buildLaunchCommand(paths: GamePaths, resolved: ResolvedVersion, o: LaunchOptions) {
-  const { json, jarVersionId } = resolved
+  const { json } = resolved
 
   const classpath = [
     ...resolveLibraries(json.libraries).filter((l) => !l.extract).map((l) => libraryFile(paths.libraries, l)),
-    paths.versionJar(jarVersionId)
+    paths.versionJar(o.versionId) // pour une version héritée, installVersion en a fait une copie du jar vanilla
   ].join(delimiter)
 
   const vars: Record<string, string> = {
@@ -86,5 +86,7 @@ export function buildLaunchCommand(paths: GamePaths, resolved: ResolvedVersion, 
 }
 
 export function spawnGame(cmd: { command: string; args: string[]; cwd: string }): ChildProcess {
-  return spawn(cmd.command, cmd.args, { cwd: cmd.cwd, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] })
+  // Sous Windows : javaw.exe (pas de console) et surtout PAS windowsHide, qui cacherait aussi la fenêtre du jeu.
+  const command = process.platform === 'win32' ? cmd.command.replace(/java\.exe$/i, 'javaw.exe') : cmd.command
+  return spawn(command, cmd.args, { cwd: cmd.cwd, stdio: ['ignore', 'pipe', 'pipe'] })
 }

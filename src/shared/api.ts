@@ -1,3 +1,4 @@
+import type { ForgeVersions } from '../core/forge'
 import type { Progress } from '../core/types'
 
 export interface VersionInfo {
@@ -10,11 +11,20 @@ export interface LoginCode {
   verificationUri: string
 }
 
+export interface PlayOptions {
+  /** Version de Minecraft (ex. "1.20.1"). */
+  mcVersion: string
+  /** Version Forge complète ("1.20.1-47.3.0") ; absent = vanilla. */
+  forgeVersion?: string
+  /** N'est utilisé que si aucun compte Microsoft n'est connecté. */
+  offlineName: string
+}
+
 /** API exposée au renderer via le preload (window.launcher). */
 export interface LauncherApi {
   listVersions(): Promise<{ latestRelease: string; versions: VersionInfo[] }>
-  /** `offlineName` n'est utilisé que si aucun compte Microsoft n'est connecté. */
-  play(versionId: string, offlineName: string): Promise<void>
+  listForgeVersions(mcVersion: string): Promise<ForgeVersions>
+  play(opts: PlayOptions): Promise<void>
   onProgress(cb: (p: Progress) => void): void
   onLog(cb: (line: string) => void): void
   onExit(cb: (code: number | null) => void): void

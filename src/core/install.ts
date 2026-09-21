@@ -1,5 +1,5 @@
 import AdmZip from 'adm-zip'
-import { mkdir, readFile } from 'node:fs/promises'
+import { copyFile, mkdir, readFile, stat } from 'node:fs/promises'
 import { join } from 'node:path'
 import { downloadAll, downloadFile, type DownloadItem } from './download'
 import { ensureJava } from './java'
@@ -41,10 +41,19 @@ export async function installVersion(paths: GamePaths, id: string, onProgress?: 
   if (!client) throw new Error(`Pas de client.jar pour ${id}`)
   await downloadFile({ url: client.url, dest: paths.versionJar(jarVersionId), sha1: client.sha1, size: client.size })
 
+  // Une version héritée (Forge…) se lance avec versions/<id>/<id>.jar : Forge ignore ce jar sur le classpath
+  // via -DignoreList=...,${version_name}.jar, sinon le jar vanilla entre en conflit avec le client patché.
+  if (id !== jarVersionId) {
+    const same = await stat(paths.versionJar(id)).then((s) => s.size === client.size, () => false)
+    if (!same) await copyFile(paths.versionJar(jarVersionId), paths.versionJar(id))
+  }
+
   // librairies
   const libs = resolveLibraries(json.libraries)
   await downloadAll(
-    libs.map((l) => ({ url: l.artifact.url, dest: libraryFile(paths.libraries, l), sha1: l.artifact.sha1, size: l.artifact.size })),
+    libs
+      .filter((l) => l.artifact.url) // url vide = fichier généré par l'installer Forge, pas téléchargeable
+      .map((l) => ({ url: l.artifact.url, dest: libraryFile(paths.libraries, l), sha1: l.artifact.sha1, size: l.artifact.size })),
     'Librairies',
     onProgress
   )

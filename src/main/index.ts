@@ -1,11 +1,13 @@
 import { app, BrowserWindow, ipcMain, shell } from 'electron'
 import { join } from 'node:path'
 import { offlineAccount } from '../core/auth'
+import { installForge, listForgeVersions } from '../core/forge'
 import { installVersion } from '../core/install'
 import { buildLaunchCommand, spawnGame } from '../core/launch'
 import { loginWithDeviceCode, loginWithRefreshToken } from '../core/msa'
 import { gamePaths } from '../core/paths'
-import type { Account } from '../core/types'
+import type { Account, Progress } from '../core/types'
+import type { PlayOptions } from '../shared/api'
 import { fetchVersionList } from '../core/version'
 import { clearAccount, loadAccount, saveAccount } from './accounts'
 
@@ -36,6 +38,8 @@ ipcMain.handle('versions:list', async () => {
   }
 })
 
+ipcMain.handle('forge:versions', (_e, mcVersion: string) => listForgeVersions(mcVersion))
+
 // --- Compte Microsoft ---
 
 ipcMain.handle('auth:account', async () => (await loadAccount())?.name ?? null)
@@ -64,12 +68,17 @@ ipcMain.handle('auth:logout', () => clearAccount())
 
 // --- Lancement ---
 
-ipcMain.handle('game:play', async (e, versionId: string, offlineName: string) => {
+ipcMain.handle('game:play', async (e, { mcVersion, forgeVersion, offlineName }: PlayOptions) => {
   if (running) throw new Error('Une partie est déjà en cours')
   running = true
   const send = (channel: string, payload: unknown) => e.sender.send(channel, payload)
   try {
-    const { resolved, javaPath } = await installVersion(paths, versionId, (p) => send('game:progress', p))
+    const onProgress = (p: Progress) => send('game:progress', p)
+    // Forge : l'installer crée une version "<mc>-forge-<x>" qui hérite du vanilla.
+    const versionId = forgeVersion
+      ? await installForge(paths, mcVersion, forgeVersion, onProgress, (l) => send('game:log', `[forge] ${l}`))
+      : mcVersion
+    const { resolved, javaPath } = await installVersion(paths, versionId, onProgress)
 
     // Token rafraîchi juste avant le lancement (l'access token Minecraft dure ~24 h).
     let account: Account
