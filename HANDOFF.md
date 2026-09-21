@@ -65,6 +65,14 @@ Non vérifié :
 - Vérifié : 40 tests ; réseau (FTB via l'interface, .mrpack Fabulously Optimized, Sodium Extra → Fabric API + Sodium, mise à jour de Sodium) ; UI via CDP 14/14 ; **en jeu** : JEI installé depuis l'UI et chargé par NeoForge 1.21.1 avec arguments JVM (guillemets compris) sur la ligne de commande, Fabulously Optimized installé depuis l'UI et lancé (151 mods).
 - Non vérifié : glisser-déposer réel depuis l'Explorateur (le même appel IPC est testé avec un chemin) ; mise à jour d'un mod pendant qu'un jeu tourne (bloquée par l'UI, non forcée).
 
+### Releases 0.2.0 et 0.3.0, mise à jour automatique
+
+- `v0.2.0` : mods, modpacks Modrinth, réglages d'instance. La version n'est plus dupliquée dans `launch.ts` (lue dans `package.json`).
+- `v0.3.0` : mise à jour automatique (`src/main/updater.ts`, carte `renderer/update.ts`, `publish` GitHub dans la config de build, `latest.yml` et `.blockmap` joints par le workflow).
+- Vérifié de bout en bout : installeur 0.2.99 compilé en local et installé en silence par-dessus la 0.1.0 de l'utilisateur (`K:JeuxMC Mod Launcher`) → il a trouvé la 0.3.0, téléchargée en ~4 s (différentiel), puis « Redémarrer » → installé en silence, relancé en 0.3.0 (`--updated`). L'installation de l'utilisateur est donc en 0.3.0.
+- Non vérifié : la carte « disponible » de la version portable (logique simple, pas de release plus récente pour l'exercer).
+- Les commits de version (`a97ac4b`, `42b0495`) sont sur `dev` : PR `dev` → `main` à faire.
+
 ### Exécutable Windows
 
 - `electron-builder` (devDependency) ; `npm run dist` → `dist/MC-Mod-Launcher-Setup-0.1.0.exe` (NSIS, choix du dossier) et `dist/MC-Mod-Launcher-0.1.0-portable.exe`, ~106 Mo chacun. Icône : `build/icon.png`, bloc d'herbe isométrique en pixel art (textures 16×16 générées par un script canvas, aucun fichier Mojang), à commiter.
