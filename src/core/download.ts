@@ -6,7 +6,8 @@ import { Readable } from 'node:stream'
 import { pipeline } from 'node:stream/promises'
 import type { ProgressFn } from './types'
 
-const UA = 'mc-mod-launcher/0.1'
+// Modrinth exige un User-Agent qui identifie le projet (sinon il peut limiter ou bloquer les requêtes).
+const UA = 'boomeland/MC-mod-launcher (github.com/boomeland/MC-mod-launcher)'
 
 export async function fetchJson<T>(url: string): Promise<T> {
   const res = await fetch(url, { headers: { 'User-Agent': UA } })
@@ -14,7 +15,17 @@ export async function fetchJson<T>(url: string): Promise<T> {
   return (await res.json()) as T
 }
 
-function sha1File(path: string): Promise<string> {
+export async function postJson<T>(url: string, body: unknown): Promise<T> {
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'User-Agent': UA, 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  })
+  if (!res.ok) throw new Error(`HTTP ${res.status} sur ${url}`)
+  return (await res.json()) as T
+}
+
+export function sha1File(path: string): Promise<string> {
   return new Promise((resolve, reject) => {
     const h = createHash('sha1')
     createReadStream(path).on('data', (d) => h.update(d)).on('end', () => resolve(h.digest('hex'))).on('error', reject)

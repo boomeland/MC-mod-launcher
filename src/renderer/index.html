@@ -2,10 +2,11 @@
 <html lang="fr">
   <head>
     <meta charset="UTF-8" />
-    <!-- img-src : seules les images des modpacks FTB (leur CDN) sont chargées depuis l'extérieur. -->
+    <!-- img-src : seules les images des CDN FTB et Modrinth sont chargées depuis l'extérieur
+         (liste alignée sur IMAGE_HOSTS dans core/modpacks/common.ts). -->
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' https://cdn.feed-the-beast.com"
+      content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' https://cdn.feed-the-beast.com https://cdn.modrinth.com"
     />
     <title>MC Mod Launcher</title>
     <link rel="stylesheet" href="./style.css" />
@@ -25,7 +26,7 @@
           </button>
           <button class="nav-item" id="nav-discover">
             <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><path d="m15.5 8.5-2 5-5 2 2-5z" /></svg>
-            Modpacks FTB
+            Modpacks
           </button>
         </nav>
 
@@ -73,10 +74,10 @@
         <section id="view-empty" class="view empty-view" hidden>
           <svg viewBox="0 0 24 24" class="empty-mark"><path d="M12 2 3 7v10l9 5 9-5V7z" /><path d="m3 7 9 5 9-5M12 12v10" /></svg>
           <h1>Bienvenue</h1>
-          <p class="muted">Crée ta première instance, ou installe un modpack FTB en un clic.</p>
+          <p class="muted">Crée ta première instance, ou installe un modpack FTB ou Modrinth en un clic.</p>
           <div class="row">
             <button id="empty-create" class="btn btn-primary">Nouvelle instance</button>
-            <button id="empty-discover" class="btn btn-soft">Parcourir les modpacks FTB</button>
+            <button id="empty-discover" class="btn btn-soft">Parcourir les modpacks</button>
           </div>
         </section>
 
@@ -103,11 +104,35 @@
 
           <div class="tabs">
             <button class="tab active" data-tab="console">Console</button>
+            <button class="tab" data-tab="mods" id="tab-btn-mods">Mods</button>
             <button class="tab" data-tab="settings">Réglages</button>
           </div>
 
           <div class="tab-panel" id="tab-console">
             <pre id="log" class="console"></pre>
+          </div>
+
+          <div class="tab-panel mods" id="tab-mods" hidden>
+            <div class="mods-toolbar">
+              <label class="search search-sm">
+                <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
+                <input id="mods-filter" placeholder="Filtrer les mods installés…" spellcheck="false" />
+              </label>
+              <span class="muted" id="mods-count"></span>
+              <span class="spacer"></span>
+              <button id="mods-check" class="btn btn-soft">Mises à jour</button>
+              <button id="mods-add" class="btn btn-soft">Ajouter des .jar</button>
+              <button id="mods-browse" class="btn btn-primary">
+                <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" /></svg>
+                Modrinth
+              </button>
+            </div>
+            <div class="notice" id="mods-updates" hidden>
+              <span id="mods-updates-text"></span>
+              <button id="mods-update-all" class="btn btn-primary btn-sm">Tout mettre à jour</button>
+            </div>
+            <ul class="mods-list" id="mods-list"></ul>
+            <p class="drop-hint">Glisse des fichiers .jar ici pour les ajouter à l'instance.</p>
           </div>
 
           <div class="tab-panel settings" id="tab-settings" hidden>
@@ -116,9 +141,33 @@
               <input id="inst-rename" maxlength="60" />
             </div>
             <div class="card">
+              <h3>Version du jeu</h3>
+              <div class="form-row">
+                <label class="grow">Minecraft <select id="set-version"></select></label>
+                <label class="check"><input type="checkbox" id="set-snapshots" /> Snapshots</label>
+              </div>
+              <fieldset class="segmented" id="set-loader-group">
+                <legend>Loader</legend>
+                <label><input type="radio" name="set-loader" value="vanilla" /><span>Vanilla</span></label>
+                <label><input type="radio" name="set-loader" value="forge" /><span>Forge</span></label>
+                <label><input type="radio" name="set-loader" value="neoforge" /><span>NeoForge</span></label>
+                <label><input type="radio" name="set-loader" value="fabric" /><span>Fabric</span></label>
+              </fieldset>
+              <label id="set-loader-version-wrap" hidden><span id="set-loader-version-label"></span> <select id="set-loader-version"></select></label>
+              <div class="row">
+                <button id="set-version-apply" class="btn btn-primary" disabled>Appliquer</button>
+                <span class="tiny">Les mods déjà installés peuvent ne plus être compatibles avec la nouvelle version.</span>
+              </div>
+            </div>
+            <div class="card">
               <h3>Mémoire allouée <span class="value" id="inst-memory-label"></span></h3>
               <input id="inst-memory" type="range" min="1024" max="16384" step="512" />
               <div class="range-scale"><span>1 Go</span><span>16 Go</span></div>
+            </div>
+            <div class="card">
+              <h3>Arguments JVM</h3>
+              <input id="inst-jvm" maxlength="1000" spellcheck="false" placeholder="ex. -XX:+UseG1GC -XX:MaxGCPauseMillis=50" />
+              <p class="tiny">Ajoutés à la commande Java au lancement. Mets entre guillemets un argument qui contient des espaces. La mémoire se règle au-dessus.</p>
             </div>
             <div class="card card-danger">
               <div>
@@ -136,22 +185,26 @@
         <section id="view-discover" class="view discover" hidden>
           <header class="page-header">
             <div>
-              <h1>Modpacks FTB</h1>
-              <p class="muted" id="ftb-count">Chargement du catalogue…</p>
+              <h1>Modpacks</h1>
+              <p class="muted" id="packs-count">Chargement…</p>
+            </div>
+            <div class="source-tabs" id="packs-sources">
+              <button class="source-tab active" data-source="modrinth">Modrinth</button>
+              <button class="source-tab" data-source="ftb">FTB</button>
             </div>
             <label class="search">
               <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
-              <input id="ftb-search" placeholder="Rechercher un modpack…" spellcheck="false" />
+              <input id="packs-search" placeholder="Rechercher un modpack…" spellcheck="false" />
             </label>
           </header>
-          <div class="filters" id="ftb-filters">
+          <div class="filters" id="packs-filters">
             <button class="chip-btn active" data-loader="">Tous</button>
             <button class="chip-btn" data-loader="neoforge">NeoForge</button>
             <button class="chip-btn" data-loader="forge">Forge</button>
             <button class="chip-btn" data-loader="fabric">Fabric</button>
-            <label class="check"><input type="checkbox" id="ftb-unsupported" /> Afficher les packs non pris en charge</label>
+            <label class="check"><input type="checkbox" id="packs-unsupported" /> Afficher les packs non pris en charge</label>
           </div>
-          <div class="grid" id="ftb-grid"></div>
+          <div class="grid" id="packs-grid"></div>
         </section>
 
         <footer class="statusbar">
@@ -185,21 +238,40 @@
       </form>
     </dialog>
 
-    <dialog id="ftb-dialog" class="modal modal-wide">
-      <div class="modal-banner" id="ftb-banner"><div id="ftb-icon"></div></div>
-      <form id="ftb-form" class="modal-body">
-        <h2 id="ftb-name"></h2>
-        <p class="muted" id="ftb-synopsis"></p>
+    <dialog id="pack-dialog" class="modal modal-wide">
+      <div class="modal-banner" id="pack-banner"><div id="pack-icon"></div></div>
+      <form id="pack-form" class="modal-body">
+        <h2 id="pack-name"></h2>
+        <p class="muted clamp3" id="pack-summary"></p>
         <div class="form-row">
-          <label class="grow">Version <select id="ftb-version"></select></label>
-          <label>RAM (Mo) <input id="ftb-memory" type="number" min="512" max="32768" step="512" /></label>
+          <label class="grow">Version <select id="pack-version"></select></label>
+          <label>RAM (Mo) <input id="pack-memory" type="number" min="512" max="32768" step="512" /></label>
         </div>
-        <p class="tiny" id="ftb-ram-hint"></p>
+        <p class="tiny" id="pack-ram-hint"></p>
         <div class="actions">
-          <button type="button" id="ftb-cancel" class="btn btn-soft">Annuler</button>
-          <button type="submit" id="ftb-submit" class="btn btn-primary">Installer</button>
+          <button type="button" id="pack-cancel" class="btn btn-soft">Annuler</button>
+          <button type="submit" id="pack-submit" class="btn btn-primary">Installer</button>
         </div>
       </form>
+    </dialog>
+
+    <dialog id="mods-dialog" class="modal modal-wide modal-tall">
+      <div class="modal-body">
+        <div class="modal-head">
+          <div>
+            <h2>Ajouter des mods</h2>
+            <p class="muted" id="mods-dialog-target"></p>
+          </div>
+          <button type="button" id="mods-dialog-close" class="icon-btn" title="Fermer">
+            <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18" /></svg>
+          </button>
+        </div>
+        <label class="search">
+          <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
+          <input id="mods-search" placeholder="Rechercher sur Modrinth (ex. sodium, jei)…" spellcheck="false" />
+        </label>
+        <ul class="mod-results" id="mods-results"></ul>
+      </div>
     </dialog>
 
     <script type="module" src="./main.ts"></script>

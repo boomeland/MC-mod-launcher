@@ -1,18 +1,24 @@
-// Liste des instances (barre latérale) et vue de l'instance sélectionnée : bannière, onglets Console / Réglages.
+// Liste des instances (barre latérale) et vue de l'instance sélectionnée : bannière et onglets.
+// Les onglets Mods et Réglages vivent dans leurs propres modules, abonnés via onInstanceChange.
 import type { Instance } from '../core/instances'
 import { $, el, tile } from './dom'
 import { setStatus } from './status'
 import { currentView, showView } from './views'
 
+type Tab = 'console' | 'mods' | 'settings'
+
 const list = $<HTMLUListElement>('instance-list')
-const memoryIn = $<HTMLInputElement>('inst-memory')
-const renameIn = $<HTMLInputElement>('inst-rename')
-const deleteBtn = $<HTMLButtonElement>('delete')
 
 let instances: Instance[] = []
 let selectedId: string | null = null
+let busy = false
+const listeners: ((i: Instance | null, busy: boolean) => void)[] = []
 
 export const getSelectedInstance = (): Instance | null => instances.find((i) => i.id === selectedId) ?? null
+/** Vrai pendant qu'un jeu tourne : on ne modifie alors ni les instances ni leurs mods (fichiers verrouillés). */
+export const isBusy = () => busy
+/** Appelé à chaque rendu : changement de sélection, rechargement de la liste, début ou fin de partie. */
+export const onInstanceChange = (cb: (i: Instance | null, busy: boolean) => void) => listeners.push(cb)
 
 export const LOADER_NAMES: Record<Instance['loader'], string> = { vanilla: 'Vanilla', forge: 'Forge', neoforge: 'NeoForge', fabric: 'Fabric' }
 
@@ -22,7 +28,7 @@ export const shortLoaderVersion = (mcVersion: string, v: string) => (v.startsWit
 const loaderLabel = (i: Instance) =>
   i.loader === 'vanilla' ? 'Vanilla' : `${LOADER_NAMES[i.loader]} ${shortLoaderVersion(i.mcVersion, i.loaderVersion)}`
 
-const gigabytes = (mb: number) => `${(mb / 1024).toLocaleString('fr-FR', { maximumFractionDigits: 1 })} Go`
+export const gigabytes = (mb: number) => `${(mb / 1024).toLocaleString('fr-FR', { maximumFractionDigits: 1 })} Go`
 
 /** Pastille de la bannière ; `color` ajoute un point à la couleur du loader. */
 function chip(text: string, color?: string) {
@@ -64,9 +70,9 @@ function renderInstance(sel: Instance) {
   bg.style.backgroundImage = splash ? `url("${splash}")` : ''
   bg.style.setProperty('--hero-color', `color-mix(in srgb, var(--${sel.loader}) 45%, transparent)`)
 
-  renameIn.value = sel.name
-  memoryIn.value = String(sel.memoryMb)
-  $('inst-memory-label').textContent = gigabytes(sel.memoryMb)
+  // Pas de mods sans loader : l'onglet disparaît, et on n'y reste pas.
+  $('tab-btn-mods').hidden = sel.loader === 'vanilla'
+  if (sel.loader === 'vanilla' && !$('tab-mods').hidden) showTab('console')
 }
 
 function render() {
@@ -75,6 +81,7 @@ function render() {
   const sel = getSelectedInstance()
   if (sel) renderInstance(sel)
   if (currentView() !== 'discover') showView(sel ? 'instance' : 'empty')
+  for (const cb of listeners) cb(sel, busy)
 }
 
 function select(id: string) {
@@ -83,65 +90,36 @@ function select(id: string) {
   showView('instance')
 }
 
-export function showTab(name: 'console' | 'settings') {
+export function showTab(name: Tab) {
   for (const t of document.querySelectorAll<HTMLButtonElement>('.tab')) t.classList.toggle('active', t.dataset.tab === name)
-  $('tab-console').hidden = name !== 'console'
-  $('tab-settings').hidden = name !== 'settings'
+  for (const tab of ['console', 'mods', 'settings'] as Tab[]) $(`tab-${tab}`).hidden = tab !== name
 }
 
 /** Recharge la liste depuis le disque ; `selectId` sélectionne une instance (ex. celle qu'on vient de créer). */
-export async function refreshInstances(selectId?: string) {
+export async function refreshInstances(selectId?: string | null) {
   instances = await window.launcher.listInstances()
-  if (selectId) selectedId = selectId
+  if (selectId !== undefined) selectedId = selectId
   render()
   if (selectId) showView('instance')
 }
 
-/** Pendant qu'un jeu tourne, on ne modifie ni ne supprime les instances. */
-export function setBusy(busy: boolean) {
-  for (const input of [deleteBtn, memoryIn, renameIn]) input.disabled = busy
-}
-
-async function update(patch: { name?: string; memoryMb?: number }) {
-  const sel = getSelectedInstance()
-  if (!sel) return
-  try {
-    await window.launcher.updateInstance(sel.id, patch)
-    await refreshInstances()
-  } catch (e) {
-    setStatus(`Erreur : ${(e as Error).message}`)
-  }
+export function setBusy(b: boolean) {
+  busy = b
+  document.body.classList.toggle('game-running', b)
+  render()
 }
 
 export function initInstances() {
   for (const t of document.querySelectorAll<HTMLButtonElement>('.tab')) {
-    t.addEventListener('click', () => showTab(t.dataset.tab as 'console' | 'settings'))
+    t.addEventListener('click', () => showTab(t.dataset.tab as Tab))
   }
   $('nav-library').addEventListener('click', () => showView(getSelectedInstance() ? 'instance' : 'empty'))
-
-  memoryIn.addEventListener('input', () => ($('inst-memory-label').textContent = gigabytes(Number(memoryIn.value))))
-  memoryIn.addEventListener('change', () => void update({ memoryMb: Number(memoryIn.value) }))
-  renameIn.addEventListener('change', () => void update({ name: renameIn.value }))
 
   $('open-folder').addEventListener('click', async () => {
     const sel = getSelectedInstance()
     if (!sel) return
     try {
       await window.launcher.openInstanceFolder(sel.id)
-    } catch (e) {
-      setStatus(`Erreur : ${(e as Error).message}`)
-    }
-  })
-
-  deleteBtn.addEventListener('click', async () => {
-    const sel = getSelectedInstance()
-    if (!sel) return
-    try {
-      if (!(await window.launcher.deleteInstance(sel.id))) return
-      selectedId = null
-      showTab('console')
-      await refreshInstances()
-      setStatus('Instance supprimée')
     } catch (e) {
       setStatus(`Erreur : ${(e as Error).message}`)
     }

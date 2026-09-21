@@ -27,6 +27,8 @@ export type Instance = LoaderChoice & {
   memoryMb: number
   createdAt: string
   art?: InstanceArt
+  /** Arguments JVM ajoutés à la commande de lancement, tels que tapés par l'utilisateur. */
+  jvmArgs?: string
 }
 
 export type NewInstance = LoaderChoice & {
@@ -44,6 +46,14 @@ const ID_RE = /^[a-z0-9]+(-[a-z0-9]+)*$/
 
 export const clampMemory = (mb: number | undefined): number =>
   Number.isFinite(mb) ? Math.min(MAX_MEMORY_MB, Math.max(MIN_MEMORY_MB, Math.round(mb!))) : DEFAULT_MEMORY_MB
+
+/** Choix du loader reconstruit champ par champ plutôt que recopié : l'entrée vient souvent de l'IPC. */
+function parseLoaderChoice(input: { loader: string; loaderVersion?: string }): LoaderChoice {
+  if (input.loader === 'vanilla') return { loader: 'vanilla' }
+  if (!isModLoader(input.loader)) throw new Error(`Loader inconnu : ${input.loader}`)
+  if (!input.loaderVersion) throw new Error(`Version de ${input.loader} manquante`)
+  return { loader: input.loader, loaderVersion: input.loaderVersion }
+}
 
 function slugify(name: string): string {
   const slug = name
@@ -91,13 +101,7 @@ export async function createInstance(baseDir: string, input: NewInstance): Promi
   const name = input.name.trim().slice(0, 60)
   if (!name) throw new Error("Le nom de l'instance est vide")
   if (!input.mcVersion) throw new Error('Version de Minecraft manquante')
-  // L'entrée vient de l'IPC : on reconstruit le choix du loader champ par champ plutôt que de le recopier tel quel.
-  let choice: LoaderChoice = { loader: 'vanilla' }
-  if (input.loader !== 'vanilla') {
-    if (!isModLoader(input.loader)) throw new Error(`Loader inconnu : ${input.loader}`)
-    if (!input.loaderVersion) throw new Error(`Version de ${input.loader} manquante`)
-    choice = { loader: input.loader, loaderVersion: input.loaderVersion }
-  }
+  const choice = parseLoaderChoice(input)
 
   // Slug unique ("mon-modpack", "mon-modpack-2", …) : mkdir non récursif = réservation atomique du dossier.
   const base = slugify(name)
@@ -127,20 +131,43 @@ export async function createInstance(baseDir: string, input: NewInstance): Promi
   return instance
 }
 
-/** Modifie les réglages d'une instance (le nom de dossier ne change jamais). */
-export async function updateInstance(
-  baseDir: string,
-  id: string,
-  patch: { name?: string; memoryMb?: number }
-): Promise<Instance> {
-  const current = await getInstance(baseDir, id)
+export interface InstancePatch {
+  name?: string
+  memoryMb?: number
+  /** Arguments JVM en plus, tels que tapés ("" pour les retirer). */
+  jvmArgs?: string
+  /** Nouvelle version de Minecraft et du loader (les mods déjà présents peuvent devenir incompatibles). */
+  version?: { mcVersion: string; loader: string; loaderVersion?: string }
+}
+
+const MAX_JVM_ARGS = 1000
+
+/** Modifie les réglages d'une instance (le nom de dossier ne change jamais). Le patch vient de l'IPC : tout est revalidé. */
+export async function updateInstance(baseDir: string, id: string, patch: InstancePatch): Promise<Instance> {
+  const old = await getInstance(baseDir, id)
+  const target = patch.version ?? old
+  if (!target.mcVersion) throw new Error('Version de Minecraft manquante')
+  const jvmArgs = (patch.jvmArgs ?? old.jvmArgs ?? '').trim()
+  if (jvmArgs.length > MAX_JVM_ARGS) throw new Error(`Arguments JVM trop longs (${MAX_JVM_ARGS} caractères maximum)`)
+
+  // Reconstruit champ par champ : pas de loaderVersion périmé après un passage en vanilla, ni de clé inattendue.
   const next: Instance = {
-    ...current,
-    name: patch.name?.trim() ? patch.name.trim().slice(0, 60) : current.name,
-    memoryMb: patch.memoryMb === undefined ? current.memoryMb : clampMemory(patch.memoryMb)
+    id: old.id,
+    name: patch.name?.trim() ? patch.name.trim().slice(0, 60) : old.name,
+    mcVersion: target.mcVersion,
+    ...parseLoaderChoice(target),
+    memoryMb: patch.memoryMb === undefined ? old.memoryMb : clampMemory(patch.memoryMb),
+    createdAt: old.createdAt,
+    ...(old.art && { art: old.art }),
+    ...(jvmArgs && { jvmArgs })
   }
   await writeFile(metaFile(baseDir, id), JSON.stringify(next, null, 2))
   return next
+}
+
+/** Découpe les arguments JVM d'une instance, en respectant les guillemets ("-Dchemin=C:\Mes Jeux"). */
+export function splitJvmArgs(args: string | undefined): string[] {
+  return [...(args ?? '').matchAll(/"([^"]*)"|(\S+)/g)].map((m) => m[1] ?? m[2])
 }
 
 /** Supprime l'instance ET son dossier de jeu (mondes et mods compris). */

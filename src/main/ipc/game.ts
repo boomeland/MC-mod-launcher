@@ -2,7 +2,7 @@ import { ipcMain } from 'electron'
 import type { ChildProcess } from 'node:child_process'
 import { mkdir } from 'node:fs/promises'
 import { offlineAccount } from '../../core/auth'
-import { getInstance, instanceGameDir } from '../../core/instances'
+import { getInstance, instanceGameDir, splitJvmArgs } from '../../core/instances'
 import { installVersion } from '../../core/install'
 import { buildLaunchCommand, spawnGame } from '../../core/launch'
 import { LOADERS } from '../../core/loaders'
@@ -54,7 +54,14 @@ export function registerGameIpc() {
       const account = await resolveAccount(offlineName)
 
       const proc = spawnGame(
-        buildLaunchCommand(paths, resolved, { versionId, account, javaPath, gameDir, maxMemoryMb: instance.memoryMb })
+        buildLaunchCommand(paths, resolved, {
+          versionId,
+          account,
+          javaPath,
+          gameDir,
+          maxMemoryMb: instance.memoryMb,
+          extraJvmArgs: splitJvmArgs(instance.jvmArgs)
+        })
       )
       forwardLogs(proc, (line) => send('game:log', line))
       proc.on('exit', (code) => {

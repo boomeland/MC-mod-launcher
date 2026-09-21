@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer } from 'electron'
+import { contextBridge, ipcRenderer, webUtils } from 'electron'
 import type { LauncherApi } from '../shared/api'
 
 const api: LauncherApi = {
@@ -9,8 +9,19 @@ const api: LauncherApi = {
   updateInstance: (id, patch) => ipcRenderer.invoke('instances:update', id, patch),
   deleteInstance: (id) => ipcRenderer.invoke('instances:delete', id),
   openInstanceFolder: (id) => ipcRenderer.invoke('instances:open-folder', id),
-  listFtbPacks: () => ipcRenderer.invoke('ftb:list'),
-  installFtbPack: (packId, versionId, memoryMb) => ipcRenderer.invoke('ftb:install', packId, versionId, memoryMb),
+  searchPacks: (source, query, loader, offset) => ipcRenderer.invoke('packs:search', source, query, loader, offset),
+  getPack: (source, id) => ipcRenderer.invoke('packs:get', source, id),
+  installPack: (source, packId, versionId, memoryMb) => ipcRenderer.invoke('packs:install', source, packId, versionId, memoryMb),
+  listMods: (id) => ipcRenderer.invoke('mods:list', id),
+  identifyMods: (id, files) => ipcRenderer.invoke('mods:identify', id, files),
+  setModEnabled: (id, file, enabled) => ipcRenderer.invoke('mods:set-enabled', id, file, enabled),
+  deleteMod: (id, file) => ipcRenderer.invoke('mods:delete', id, file),
+  addMods: (id, files) => ipcRenderer.invoke('mods:add', id, files),
+  pathForFile: (file) => webUtils.getPathForFile(file),
+  searchMods: (id, query, offset) => ipcRenderer.invoke('mods:search', id, query, offset),
+  installMod: (id, projectId) => ipcRenderer.invoke('mods:install', id, projectId),
+  checkModUpdates: (id) => ipcRenderer.invoke('mods:check-updates', id),
+  updateMod: (id, file, versionId) => ipcRenderer.invoke('mods:update', id, file, versionId),
   play: (opts) => ipcRenderer.invoke('game:play', opts),
   onProgress: (cb) => void ipcRenderer.on('game:progress', (_e, p) => cb(p)),
   onLog: (cb) => void ipcRenderer.on('game:log', (_e, line) => cb(line)),
