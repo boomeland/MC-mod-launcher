@@ -53,6 +53,12 @@ export interface LauncherApi {
   checkModUpdates(instanceId: string): Promise<ModUpdate[]>
   updateMod(instanceId: string, file: string, versionId: string): Promise<string>
 
+  /** downloading : téléchargement en cours ; ready : prête, à installer ; available : version portable, à télécharger à la main. */
+  onUpdate(cb: (u: { state: 'downloading' | 'ready' | 'available'; version: string }) => void): void
+  /** Ferme le launcher, installe la mise à jour téléchargée et le relance. */
+  installUpdate(): Promise<void>
+  openReleasePage(): Promise<void>
+
   play(opts: PlayOptions): Promise<void>
   onProgress(cb: (p: Progress) => void): void
   onLog(cb: (line: string) => void): void
