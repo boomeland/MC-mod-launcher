@@ -129,6 +129,15 @@ La page « Modpacks FTB » affiche le catalogue de l'API publique FTB (sans clé
 
 L'icône vient de `build/icon.png` (512 px, convertie en `.ico` par electron-builder). Le `client_id` Microsoft de `.env` est intégré au build : ce n'est pas un secret (client public, device code flow). L'app packagée garde ses données dans `%APPDATA%\mc-mod-launcher\`, comme en dev, et retrouve donc les instances et les fichiers déjà téléchargés.
 
+**Publier une nouvelle version** : c'est automatique via GitHub Actions (`.github/workflows/release.yml`).
+
+```bash
+# 1. monter "version" dans package.json (ex. 0.2.0), commiter, pousser
+git tag v0.2.0 && git push origin v0.2.0
+```
+
+GitHub vérifie que le tag correspond à `package.json`, lance typecheck et tests, compile les deux `.exe` sur une machine Windows, puis crée la release : les liens « Télécharger » du README pointent aussitôt dessus. Un tag avec suffixe (`v0.2.0-test.1`) produit une **pré-release**, ignorée par ces liens, pour tester. Le `client_id` Microsoft vient du secret de dépôt `MSA_CLIENT_ID`.
+
 Les exécutables **ne sont pas signés** : au premier lancement, Windows SmartScreen affiche « Windows a protégé votre ordinateur » → « Informations complémentaires » → « Exécuter quand même ».
 
 ### Logs du jeu

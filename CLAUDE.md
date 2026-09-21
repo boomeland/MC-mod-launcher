@@ -12,6 +12,7 @@ npm run build        # compile dans out/
 npm run typecheck    # tsc --noEmit
 npm test             # node:test via tsx (tests/*.test.mts)
 npm run dist         # .exe Windows (installeur + portable) dans dist/, config dans le champ "build" de package.json
+git tag vX.Y.Z && git push origin vX.Y.Z   # release publiée par GitHub Actions (tag = version de package.json ; suffixe -xxx = pré-release)
 npm run cli -- 1.20.1 [pseudo] [--forge[=v] | --neoforge[=v] | --fabric[=v]] [--instance=nom] [--dry]   # cœur sans UI, données dans .cli-data/
 npm run cli -- ftb:<packId> --instance=nom [--dry]   # modpack FTB (93 = FTB Ultimate Anniversary, le seul moderne jouable à 2 Go)
 ```
