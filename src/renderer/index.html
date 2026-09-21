@@ -26,6 +26,13 @@
       <section class="row">
         <label>Version <select id="version"></select></label>
         <label class="check"><input type="checkbox" id="snapshots" /> Snapshots</label>
+        <label>Loader
+          <select id="loader">
+            <option value="vanilla">Vanilla</option>
+            <option value="forge">Forge</option>
+          </select>
+        </label>
+        <label id="forge-wrap" hidden>Version Forge <select id="forge"></select></label>
         <button id="play">Jouer</button>
       </section>
       <div class="bar"><div id="fill"></div></div>
