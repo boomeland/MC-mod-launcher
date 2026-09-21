@@ -40,6 +40,42 @@ window.launcher.onExit((code) => {
   playBtn.disabled = false
 })
 
+// --- Compte ---
+
+const accountOut = $('account-out')
+const accountPending = $('account-pending')
+const accountIn = $('account-in')
+
+function showAccount(name: string | null, pending = false) {
+  accountOut.hidden = pending || name !== null
+  accountPending.hidden = !pending
+  accountIn.hidden = name === null
+  if (name) $('account-name').textContent = name
+}
+
+window.launcher.onLoginCode((c) => {
+  $('code').textContent = c.userCode
+  $('uri').textContent = c.verificationUri
+  showAccount(null, true)
+})
+
+$('login').addEventListener('click', async () => {
+  try {
+    showAccount(await window.launcher.login())
+    status.textContent = 'Connecté'
+  } catch (e) {
+    showAccount(null)
+    status.textContent = `Erreur : ${(e as Error).message}`
+  }
+})
+$('cancel').addEventListener('click', () => window.launcher.cancelLogin())
+$('logout').addEventListener('click', async () => {
+  await window.launcher.logout()
+  showAccount(null)
+})
+
+window.launcher.getAccount().then((name) => showAccount(name))
+
 playBtn.addEventListener('click', async () => {
   playBtn.disabled = true
   log.textContent = ''

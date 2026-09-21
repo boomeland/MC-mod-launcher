@@ -1,14 +1,20 @@
-import { app, BrowserWindow, ipcMain } from 'electron'
+import { app, BrowserWindow, ipcMain, shell } from 'electron'
 import { join } from 'node:path'
 import { offlineAccount } from '../core/auth'
 import { installVersion } from '../core/install'
 import { buildLaunchCommand, spawnGame } from '../core/launch'
+import { loginWithDeviceCode, loginWithRefreshToken } from '../core/msa'
 import { gamePaths } from '../core/paths'
+import type { Account } from '../core/types'
 import { fetchVersionList } from '../core/version'
+import { clearAccount, loadAccount, saveAccount } from './accounts'
+
+const CLIENT_ID = import.meta.env.MAIN_VITE_MSA_CLIENT_ID ?? ''
 
 const paths = gamePaths(join(app.getPath('userData'), 'minecraft'))
 let win: BrowserWindow | null = null
 let running = false
+let loginAbort: AbortController | null = null
 
 function createWindow() {
   win = new BrowserWindow({
@@ -30,18 +36,53 @@ ipcMain.handle('versions:list', async () => {
   }
 })
 
-ipcMain.handle('game:play', async (e, versionId: string, username: string) => {
+// --- Compte Microsoft ---
+
+ipcMain.handle('auth:account', async () => (await loadAccount())?.name ?? null)
+
+ipcMain.handle('auth:login', async (e) => {
+  loginAbort?.abort()
+  loginAbort = new AbortController()
+  try {
+    const { account, refreshToken } = await loginWithDeviceCode(
+      CLIENT_ID,
+      (dc) => {
+        e.sender.send('auth:code', { userCode: dc.userCode, verificationUri: dc.verificationUri })
+        if (dc.verificationUri.startsWith('https://')) void shell.openExternal(dc.verificationUri)
+      },
+      loginAbort.signal
+    )
+    await saveAccount(account.name, account.uuid, refreshToken)
+    return account.name
+  } finally {
+    loginAbort = null
+  }
+})
+
+ipcMain.on('auth:cancel', () => loginAbort?.abort())
+ipcMain.handle('auth:logout', () => clearAccount())
+
+// --- Lancement ---
+
+ipcMain.handle('game:play', async (e, versionId: string, offlineName: string) => {
   if (running) throw new Error('Une partie est déjà en cours')
   running = true
   const send = (channel: string, payload: unknown) => e.sender.send(channel, payload)
   try {
     const { resolved, javaPath } = await installVersion(paths, versionId, (p) => send('game:progress', p))
-    const cmd = buildLaunchCommand(paths, resolved, {
-      versionId,
-      account: offlineAccount(username),
-      javaPath,
-      gameDir: paths.root
-    })
+
+    // Token rafraîchi juste avant le lancement (l'access token Minecraft dure ~24 h).
+    let account: Account
+    const stored = await loadAccount()
+    if (stored) {
+      const r = await loginWithRefreshToken(CLIENT_ID, stored.refreshToken)
+      await saveAccount(r.account.name, r.account.uuid, r.refreshToken)
+      account = r.account
+    } else {
+      account = offlineAccount(offlineName)
+    }
+
+    const cmd = buildLaunchCommand(paths, resolved, { versionId, account, javaPath, gameDir: paths.root })
     const proc = spawnGame(cmd)
     const forward = (d: Buffer) => d.toString().split(/\r?\n/).filter(Boolean).forEach((l) => send('game:log', l))
     proc.stdout!.on('data', forward)

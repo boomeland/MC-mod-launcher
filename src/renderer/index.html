@@ -9,8 +9,21 @@
   <body>
     <main>
       <h1>MC Mod Launcher</h1>
+      <section class="row" id="account">
+        <div class="row" id="account-out">
+          <button id="login" class="secondary">Connexion Microsoft</button>
+          <label>Pseudo hors-ligne <input id="username" value="Player" maxlength="16" /></label>
+        </div>
+        <div class="row" id="account-pending" hidden>
+          <span>Code <strong id="code"></strong> à saisir sur <span id="uri"></span></span>
+          <button id="cancel" class="secondary">Annuler</button>
+        </div>
+        <div class="row" id="account-in" hidden>
+          <span>Connecté : <strong id="account-name"></strong></span>
+          <button id="logout" class="secondary">Déconnexion</button>
+        </div>
+      </section>
       <section class="row">
-        <label>Pseudo <input id="username" value="Player" maxlength="16" /></label>
         <label>Version <select id="version"></select></label>
         <label class="check"><input type="checkbox" id="snapshots" /> Snapshots</label>
         <button id="play">Jouer</button>

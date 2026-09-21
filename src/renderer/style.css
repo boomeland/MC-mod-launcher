@@ -12,3 +12,7 @@ button:disabled { background: #2c323a; color: #6b7480; cursor: default; }
 #fill { height: 100%; width: 0; background: #3fa066; transition: width 0.1s; }
 #status { color: #9aa3ad; font-size: 12px; }
 #log { flex: 1; margin: 0; padding: 10px; overflow: auto; background: #0d0f12; border-radius: 6px; font: 12px ui-monospace, Consolas, monospace; white-space: pre-wrap; }
+[hidden] { display: none !important; }
+.row > .row { align-items: center; }
+button.secondary { background: #2c323a; color: #e6e8eb; }
+#code { font: 700 16px ui-monospace, Consolas, monospace; letter-spacing: 2px; color: #3fa066; }
