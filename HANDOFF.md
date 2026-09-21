@@ -8,13 +8,13 @@ Ne pas y chercher le fonctionnement du launcher (→ `README.md`) ni les règles
 
 ## 1. État git
 
-Tout le travail décrit ci-dessous est **commité et poussé sur `origin/dev`** (3 commits au-dessus de `cc0d1f4`). Prochaine étape côté utilisateur : PR `dev` → `main` sur GitHub.
+Tout le travail décrit ci-dessous est **commité et poussé sur `origin/dev`**, et la release `v0.1.0` est publiée (sans les mods ni Modrinth, arrivés après). Prochaine étape côté utilisateur : PR `dev` → `main` sur GitHub.
 
 Historique utile :
 
 | Commit | Contenu |
 |---|---|
-| *(3 commits du 21/09)* | Code (instances, loaders, FTB, interface) · exécutable Windows · documentation |
+| *(commits du 21/09)* | Instances, loaders, FTB, interface · exécutable Windows et release automatique · mods, modpacks Modrinth, réglages d'instance · documentation |
 | `e4659b2` | Refactoring : découpage des gros fichiers (`msa/`, `ipc/`, modules renderer) |
 | `248b7e1` | Support de Forge + correction de la fenêtre du jeu cachée |
 | `028e519` | Auth Microsoft (device code) + README détaillé |
@@ -56,6 +56,14 @@ Non vérifié :
 - **Bug trouvé en testant « Jouer » depuis l'app** : le renderer montait à 5 Go et se figeait (un ajout au DOM et un recalcul de mise en page par ligne de log). Corrigé : affichage regroupé par image et plafonné, et logs XML log4j décodés dans le main (`core/log4j.ts`). Vérifié : 95 Mo, 0 ligne XML.
 - Vérifié : le loader des 62 packs se résout sans échec ; FTB Ultimate Anniversary (id 93, 1.16.5) installé et lancé à 2 Go via le CLI **et via l'interface** (« Jouer » compris) ; Fabric 1.20.1 en `--dry`. 25 tests.
 - Non vérifié : lancement réel d'un pack Fabric ou NeoForge 1.20.1 (installation seulement), et d'un gros pack moderne (4 à 8 Go demandés, au-dessus de la limite de test de 2 Go).
+
+### Mods, modpacks Modrinth, instances
+
+- Périmètre choisi par l'utilisateur : gestion des mods (liste, activer/désactiver, supprimer, .jar locaux par bouton et glisser-déposer, recherche Modrinth avec dépendances, mises à jour), modpacks Modrinth (recherche + installation ; **pas** d'import de .mrpack local), instances (changer de version, arguments JVM ; renommer existait déjà).
+- Cœur : `modpacks/index.ts` (interface `ModpackSource` avec `prepare` → création d'instance → `install`), `modpacks/common.ts`, `modpacks/modrinth.ts` (.mrpack : hôtes autorisés, zip slip), `modrinth.ts` (client API), `mods.ts` (local, noms validés), `modrinth-mods.ts` (identification par SHA1, dépendances, mises à jour sans passage stable → bêta), `paths.ts` (`insideDir`), `instances.ts` (`parseLoaderChoice`, patch version / JVM, `splitJvmArgs`).
+- Interface : onglet Mods, onglet Réglages étendu, page Modpacks à deux sources, `version-picker.ts` partagé. CSP : + `cdn.modrinth.com`.
+- Vérifié : 40 tests ; réseau (FTB via l'interface, .mrpack Fabulously Optimized, Sodium Extra → Fabric API + Sodium, mise à jour de Sodium) ; UI via CDP 14/14 ; **en jeu** : JEI installé depuis l'UI et chargé par NeoForge 1.21.1 avec arguments JVM (guillemets compris) sur la ligne de commande, Fabulously Optimized installé depuis l'UI et lancé (151 mods).
+- Non vérifié : glisser-déposer réel depuis l'Explorateur (le même appel IPC est testé avec un chemin) ; mise à jour d'un mod pendant qu'un jeu tourne (bloquée par l'UI, non forcée).
 
 ### Exécutable Windows
 
