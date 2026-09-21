@@ -7,6 +7,7 @@ import {
   instanceGameDir,
   listInstances,
   updateInstance,
+  type InstancePatch,
   type NewInstance
 } from '../../core/instances'
 import { INSTANCES_DIR } from '../config'
@@ -15,7 +16,7 @@ export function registerInstancesIpc() {
   ipcMain.handle('instances:list', () => listInstances(INSTANCES_DIR))
   // Les visuels ne sont fixés que par le main (depuis l'API FTB), jamais par le renderer.
   ipcMain.handle('instances:create', (_e, input: NewInstance) => createInstance(INSTANCES_DIR, { ...input, art: undefined }))
-  ipcMain.handle('instances:update', (_e, id: string, patch: { name?: string; memoryMb?: number }) =>
+  ipcMain.handle('instances:update', (_e, id: string, patch: InstancePatch) =>
     updateInstance(INSTANCES_DIR, id, patch)
   )
   // La confirmation vit ici et pas dans le renderer, pour deux raisons :

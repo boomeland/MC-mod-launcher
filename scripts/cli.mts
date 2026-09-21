@@ -1,15 +1,15 @@
-// Usage : npm run cli -- <mcVersion | ftb:<packId>> [pseudo] [--forge[=v] | --neoforge[=v] | --fabric[=v]] [--instance=<nom>] [--dry]
+// Usage : npm run cli -- <mcVersion | ftb:<id> | mr:<id>> [pseudo] [--forge[=v] | --neoforge[=v] | --fabric[=v]] [--instance=<nom>] [--dry]
 // Installe la version dans .cli-data/ puis la lance (ou affiche juste la commande avec --dry).
 // --<loader> sans valeur = version recommandée (ou la plus récente).
 // --instance=<nom> lance dans le dossier de jeu d'une instance (créée si besoin, 2048 Mo) au lieu de .cli-data/.
-// ftb:<packId> installe un modpack FTB (sa dernière version jouable) : --instance est alors obligatoire.
+// ftb:<id> ou mr:<id|slug> installe un modpack FTB ou Modrinth (sa dernière version jouable) : --instance est alors obligatoire.
 import { join, resolve } from 'node:path'
 import { offlineAccount } from '../src/core/auth'
 import { createInstance, instanceGameDir, listInstances, type LoaderChoice } from '../src/core/instances'
 import { installVersion } from '../src/core/install'
 import { buildLaunchCommand, spawnGame } from '../src/core/launch'
 import { LOADERS } from '../src/core/loaders'
-import { getFtbPack, installFtbFiles, resolveFtbLoader, type FtbVersion } from '../src/core/modpacks/ftb'
+import { PACK_SOURCES, type PreparedPack } from '../src/core/modpacks'
 import { gamePaths } from '../src/core/paths'
 import { isModLoader } from '../src/core/types'
 
@@ -18,7 +18,7 @@ const dry = args.includes('--dry')
 const instanceName = args.find((a) => a.startsWith('--instance='))?.split('=')[1]
 const [loaderFlag, wanted] = args.find((a) => isModLoader(a.slice(2).split('=')[0]))?.slice(2).split('=') ?? []
 const [target, name = 'Player'] = args.filter((a) => !a.startsWith('--'))
-if (!target) throw new Error('Usage : npm run cli -- <mcVersion | ftb:<packId>> [pseudo] [--<loader>[=<version>]] [--instance=<nom>] [--dry]')
+if (!target) throw new Error('Usage : npm run cli -- <mcVersion | ftb:<id> | mr:<id>> [pseudo] [--<loader>[=<version>]] [--instance=<nom>] [--dry]')
 
 const root = resolve('.cli-data')
 const paths = gamePaths(root)
@@ -31,20 +31,21 @@ const onProgress = (p: { stage: string; total: number }) => {
   }
 }
 
-// 1. Version de Minecraft et loader : depuis le pack FTB, ou depuis la ligne de commande.
+// 1. Version de Minecraft et loader : depuis le modpack, ou depuis la ligne de commande.
 let mcVersion = target
 let choice: LoaderChoice = { loader: 'vanilla' }
-let ftb: { packId: number; version: FtbVersion } | undefined
-if (target.startsWith('ftb:')) {
-  if (!instanceName) throw new Error('Un modpack FTB s\'installe dans une instance : ajouter --instance=<nom>')
-  const packId = Number(target.slice(4))
-  const pack = await getFtbPack(packId)
-  const version = pack.versions.find((v) => v.supported)
-  if (!version) throw new Error(`Aucune version jouable de ${pack.name}`)
-  console.log(`FTB ${pack.name} ${version.name} : MC ${version.mcVersion}, ${version.loader} ${version.loaderVersion}`)
-  ftb = { packId, version }
-  mcVersion = version.mcVersion
-  choice = await resolveFtbLoader(version)
+let pack: PreparedPack | undefined
+const packTarget = target.match(/^(ftb|mr):(.+)$/)
+if (packTarget) {
+  if (!instanceName) throw new Error('Un modpack s\'installe dans une instance : ajouter --instance=<nom>')
+  const source = PACK_SOURCES[packTarget[1] === 'mr' ? 'modrinth' : 'ftb']
+  const detail = await source.getPack(packTarget[2])
+  const version = detail.versions.find((v) => v.supported)
+  if (!version) throw new Error(`Aucune version jouable de ${detail.name}`)
+  pack = await source.prepare(detail, version, join(root, 'modpacks'))
+  mcVersion = pack.mcVersion
+  choice = pack.loader
+  console.log(`${detail.name} ${version.name} : MC ${mcVersion}, ${choice.loader} ${'loaderVersion' in choice ? choice.loaderVersion : ''}`)
 } else if (isModLoader(loaderFlag)) {
   const list = await LOADERS[loaderFlag].listVersions(mcVersion)
   // Forge accepte la version courte ("47.3.0") comme la forme Maven complète ("1.20.1-47.3.0").
@@ -64,7 +65,7 @@ const versionId =
 const { resolved, javaPath } = await installVersion(paths, versionId, onProgress)
 console.log(`\nVersion : ${versionId}\nJava : ${javaPath}`)
 
-// 3. Dossier de jeu : celui d'une instance (et les fichiers du pack FTB), ou .cli-data/.
+// 3. Dossier de jeu : celui d'une instance (et les fichiers du modpack), ou .cli-data/.
 let gameDir = root
 let maxMemoryMb: number | undefined
 if (instanceName) {
@@ -75,7 +76,7 @@ if (instanceName) {
   gameDir = instanceGameDir(dir, instance.id)
   maxMemoryMb = instance.memoryMb
   console.log(`Instance ${instance.id} → ${gameDir} (${maxMemoryMb} Mo)`)
-  if (ftb) await installFtbFiles(gameDir, ftb.packId, ftb.version.id, onProgress)
+  if (pack) await pack.install(gameDir, onProgress)
 }
 
 const cmd = buildLaunchCommand(paths, resolved, {

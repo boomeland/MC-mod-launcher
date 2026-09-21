@@ -12,8 +12,9 @@ npm run build        # compile dans out/
 npm run typecheck    # tsc --noEmit
 npm test             # node:test via tsx (tests/*.test.mts)
 npm run dist         # .exe Windows (installeur + portable) dans dist/, config dans le champ "build" de package.json
+git tag vX.Y.Z && git push origin vX.Y.Z   # release publiée par GitHub Actions (tag = version de package.json ; suffixe -xxx = pré-release)
 npm run cli -- 1.20.1 [pseudo] [--forge[=v] | --neoforge[=v] | --fabric[=v]] [--instance=nom] [--dry]   # cœur sans UI, données dans .cli-data/
-npm run cli -- ftb:<packId> --instance=nom [--dry]   # modpack FTB (93 = FTB Ultimate Anniversary, le seul moderne jouable à 2 Go)
+npm run cli -- ftb:<id> | mr:<id|slug> --instance=nom [--dry]   # modpack FTB ou Modrinth (ftb:93 et mr:fabulously-optimized passent à 2 Go)
 ```
 
 Avant de conclure une modification : `npm run typecheck && npm test && npm run build`.
@@ -30,17 +31,17 @@ Avant de conclure une modification : `npm run typecheck && npm test && npm run b
 
 Trois frontières seulement, mais elles comptent :
 
-1. **IPC renderer → main** : le renderer n'a aucun accès à Node (`sandbox: true`, CSP, `contextBridge`). Toute nouvelle capacité passe par `LauncherApi` → `preload/index.ts` → `ipcMain`. Un handler `ipcMain` traite ses arguments comme des **entrées non fiables**, jamais comme déjà validées par l'UI (ex. `ftb:install` ne reçoit que des ids et relit MC/loader depuis l'API).
-2. **Chemins construits depuis une entrée** : les ids d'instance sont validés contre `^[a-z0-9]+(-[a-z0-9]+)*$` **avant tout accès disque**, car `deleteInstance` fait un `rm -r` qui efface les mondes du joueur. Ne jamais fabriquer un chemin d'instance sans passer par `instanceDir()` de `core/instances.ts` (couvert par les tests, y compris les cas `../`). Idem pour les chemins **venant d'un serveur** (fichiers d'un modpack) : `ftbDownloads` refuse tout ce qui sort du dossier de jeu.
+1. **IPC renderer → main** : le renderer n'a aucun accès à Node (`sandbox: true`, CSP, `contextBridge`). Toute nouvelle capacité passe par `LauncherApi` → `preload/index.ts` → `ipcMain`. Un handler `ipcMain` traite ses arguments comme des **entrées non fiables**, jamais comme déjà validées par l'UI (ex. `packs:install` ne reçoit que des ids et relit MC/loader depuis la source ; `mods:*` relit l'instance par son id).
+2. **Chemins construits depuis une entrée** : les ids d'instance sont validés contre `^[a-z0-9]+(-[a-z0-9]+)*$` **avant tout accès disque**, car `deleteInstance` fait un `rm -r` qui efface les mondes du joueur. Ne jamais fabriquer un chemin d'instance sans passer par `instanceDir()` de `core/instances.ts` (couvert par les tests, y compris les cas `../`). Tout autre chemin venu de l'extérieur passe par `insideDir()` de `core/paths.ts` : fichiers d'un modpack, entrées d'un `.mrpack` (zip slip), noms de mods reçus par IPC (`modPath()` de `core/mods.ts`, qui n'accepte qu'un nom de `.jar`).
 3. **Secrets** : aucun refresh token en clair sur disque — `safeStorage` uniquement, et si le chiffrement n'est pas disponible on **ne persiste pas**. Le `client_id` Azure vit dans `.env` (non commité, voir `.env.example`).
 
 ## Architecture
 
-- `src/core/` : logique métier, **sans dépendance à Electron** (donc testable en CLI et en `node:test`). `msa/` et `loaders/` sont des dossiers avec un `index.ts` d'entrée. `loaders/index.ts` définit l'interface `Loader` et la table `LOADERS` : un nouveau loader = un fichier + une entrée dans la table + une valeur dans `MOD_LOADERS` (`core/types.ts`). `modpacks/ftb.ts` : seule source de modpacks, donc **pas d'interface** ; l'extraire quand Modrinth arrive.
-- `src/main/` : process Electron. `index.ts` ne fait que brancher ; un fichier IPC par domaine dans `ipc/` (versions, instances, auth, game).
+- `src/core/` : logique métier, **sans dépendance à Electron** (donc testable en CLI et en `node:test`). `msa/` et `loaders/` sont des dossiers avec un `index.ts` d'entrée. `loaders/index.ts` définit l'interface `Loader` et la table `LOADERS` : un nouveau loader = un fichier + une entrée dans la table + une valeur dans `MOD_LOADERS` (`core/types.ts`). `modpacks/index.ts` : interface `ModpackSource` (FTB, Modrinth) et table `PACK_SOURCES`, même principe. `modrinth.ts` est le client API partagé par les modpacks et les mods (`modrinth-mods.ts`).
+- `src/main/` : process Electron. `index.ts` ne fait que brancher ; un fichier IPC par domaine dans `ipc/` (versions, instances, modpacks, mods, auth, game).
 - `src/preload/` + `src/shared/api.ts` : seul pont vers le renderer (`window.launcher`).
-- `src/renderer/` : un module par zone (instances, create, ftb, account, play, status) ; trois vues dans la zone principale (instance, vide, Modpacks FTB) basculées par `views.ts`. Thème : variables CSS dans `:root` de `style.css`, une couleur par loader (`--forge`…). Le renderer n'importe que des **types** depuis `core/` (`import type`), jamais du code Node.
-- **CSP** (`index.html`) : `img-src` n'autorise que `cdn.feed-the-beast.com`, et `core/modpacks/ftb.ts` ne garde que les images de cet hôte. Toute nouvelle source d'images se change aux deux endroits.
+- `src/renderer/` : un module par zone (instances, create, discover, mods, settings, account, play, status) ; trois vues (instance, vide, Modpacks) basculées par `views.ts`. Mods et Réglages s'abonnent à `onInstanceChange` d'`instances.ts` (pas d'import circulaire) ; `version-picker.ts` sert à la création et aux Réglages. Thème : variables CSS dans `:root` de `style.css`, une couleur par loader (`--forge`…). Le renderer n'importe que des **types** depuis `core/` (`import type`), jamais du code Node.
+- **CSP** (`index.html`) : `img-src` n'autorise que les CDN FTB et Modrinth, alignés sur `IMAGE_HOSTS` de `core/modpacks/common.ts`. Toute nouvelle source d'images se change aux deux endroits.
 - Données à l'exécution : `userData/minecraft/` (partagé : versions, libs, assets, Java) et `userData/instances/<id>/{instance.json,minecraft/}` (un dossier de jeu par instance).
 
 ## Pièges déjà rencontrés
@@ -49,7 +50,7 @@ Trois frontières seulement, mais elles comptent :
 - **Jamais `windowsHide: true` sur le process du jeu** : sous Windows ça cache aussi la fenêtre de Minecraft (symptôme vécu : le son tourne, pas de fenêtre). `spawnGame` utilise `javaw.exe` sans `windowsHide`. L'option reste correcte pour l'installer Forge/NeoForge, qui est réellement headless.
 - **Isoler l'app pour un test d'UI : `--user-data-dir=<dossier>`** (vérifié). Surcharger `APPDATA` ne suffit PAS : Electron l'ignore sous Windows et écrit dans le vrai `%APPDATA%\mc-mod-launcher\` de l'utilisateur.
 - **Jamais `alert()` / `confirm()` / `prompt()` dans le renderer** : sous Windows, après la boîte native, le clavier n'atteint plus les champs texte (la souris marche encore). Symptôme vécu, reproduit avec de vraies frappes. Une confirmation passe par `dialog.showMessageBox` côté main (cf. `instances:delete`). CDP (`Input.dispatchKeyEvent`) ne voit pas ce bug : tester le clavier avec `SendKeys`, fenêtre de test au premier plan vérifiée.
-- **RAM des tests ≤ 2048 Mo** (demande de l'utilisateur) : instances de test, `--instance=` du CLI et lancements réels. Pour un modpack, tester avec FTB Ultimate Anniversary (id 93) : les autres demandent 4 à 8 Go.
+- **RAM des tests ≤ 2048 Mo** (demande de l'utilisateur) : instances de test, `--instance=` du CLI et lancements réels. Pour un modpack, tester avec FTB Ultimate Anniversary (`ftb:93`) ou Fabulously Optimized (`mr:fabulously-optimized`, version 1.21.1) : les autres demandent 4 à 8 Go.
 - **Les logs du jeu peuvent figer le renderer** : ne jamais ajouter au DOM ligne par ligne sans plafond (vécu : 5 Go, interface figée). `renderer/status.ts` regroupe par image et tronque ; la console du jeu est en XML log4j, décodée dans le main (`core/log4j.ts`). Ne pas retirer la config log4j de Mojang pour « simplifier » : elle corrige Log4Shell.
 - **Forge / NeoForge : le jar vanilla doit être copié sous l'id de la version lancée** (`versions/<id>/<id>.jar`, fait dans `install.ts`) car Forge l'ignore par ce nom via `-DignoreList`. Sans ça : crash « Module minecraft contains package… ». Les librairies à URL vide sont générées par l'installer, donc non téléchargeables.
 - **Ne jamais tuer `java.exe` / `javaw.exe` par nom** pendant un test : ça fermerait le vrai Minecraft de l'utilisateur. Tuer par PID, en filtrant la ligne de commande sur `.cli-data`.
@@ -67,7 +68,7 @@ Trois frontières seulement, mais elles comptent :
 ## État courant
 
 - **Auth Microsoft** : device code, Xbox Live et XSTS validés contre les vrais serveurs. L'étape finale `login_with_xbox` renvoie 403 tant que Mojang n'a pas approuvé l'app Azure (`aka.ms/AppRegInfo`). Le mode hors-ligne sert en attendant.
-- **Testé en lancement réel** : vanilla 1.21.1, Forge 1.20.1 (Java 17), Forge 1.12.2 (Java 8, ancien format de JSON), NeoForge 21.1.251 (MC 1.21.1, Java 21) et le modpack FTB Ultimate Anniversary (1.16.5, via le CLI et via « Jouer » dans l'app). Fabric : installation seulement (`--dry`).
+- **Testé en lancement réel** : vanilla 1.21.1, Forge 1.20.1 (Java 17), Forge 1.12.2 (Java 8, ancien format de JSON), NeoForge 21.1.251 (MC 1.21.1, Java 21) les modpacks FTB Ultimate Anniversary (Forge 1.16.5) et Fabulously Optimized (Modrinth, Fabric 1.21.1), et un mod Modrinth (JEI) chargé par NeoForge, tous lancés depuis « Jouer » dans l'app.
 - Roadmap et détail du fonctionnement : **README.md** (ne pas dupliquer ici, ça périme).
 
 ## Boucle de vérification de suringénierie

@@ -9,6 +9,7 @@ import {
   getInstance,
   instanceGameDir,
   listInstances,
+  splitJvmArgs,
   updateInstance
 } from '../src/core/instances'
 
@@ -87,6 +88,31 @@ describe('instances', () => {
     assert.equal(u.name, 'Nouveau')
     assert.equal(u.memoryMb, 6144)
     assert.equal((await updateInstance(base, i.id, { name: '  ' })).name, 'Nouveau')
+  })
+
+  it('change de version et de loader, sans garder de version de loader périmée', async () => {
+    const i = await createInstance(base, { name: 'Evolutive', mcVersion: '1.20.1', loader: 'forge', loaderVersion: '1.20.1-47.4.10' })
+    const fabric = await updateInstance(base, i.id, { version: { mcVersion: '1.21.1', loader: 'fabric', loaderVersion: '0.16.0' } })
+    assert.deepEqual([fabric.mcVersion, fabric.loader, 'loaderVersion' in fabric && fabric.loaderVersion], ['1.21.1', 'fabric', '0.16.0'])
+    const vanilla = await updateInstance(base, i.id, { version: { mcVersion: '1.21.1', loader: 'vanilla', loaderVersion: '0.16.0' } })
+    assert.equal(vanilla.loader, 'vanilla')
+    assert.ok(!('loaderVersion' in vanilla))
+    assert.deepEqual(await getInstance(base, i.id), vanilla)
+    await assert.rejects(updateInstance(base, i.id, { version: { mcVersion: '1.21.1', loader: 'quilt', loaderVersion: '1' } }), /inconnu/)
+    await assert.rejects(updateInstance(base, i.id, { version: { mcVersion: '', loader: 'vanilla' } }), /Minecraft/)
+  })
+
+  it('enregistre, garde puis retire les arguments JVM', async () => {
+    const i = await createInstance(base, { name: 'JVM', mcVersion: '1.21.1', loader: 'vanilla' })
+    assert.equal((await updateInstance(base, i.id, { jvmArgs: '  -XX:+UseG1GC  ' })).jvmArgs, '-XX:+UseG1GC')
+    assert.equal((await updateInstance(base, i.id, { memoryMb: 3072 })).jvmArgs, '-XX:+UseG1GC')
+    assert.ok(!('jvmArgs' in (await updateInstance(base, i.id, { jvmArgs: '' }))))
+    await assert.rejects(updateInstance(base, i.id, { jvmArgs: 'x'.repeat(1001) }), /trop longs/)
+  })
+
+  it('découpe les arguments JVM en respectant les guillemets', () => {
+    assert.deepEqual(splitJvmArgs('-XX:+UseG1GC  "-Dchemin=C:\\Mes Jeux" -Da=b'), ['-XX:+UseG1GC', '-Dchemin=C:\\Mes Jeux', '-Da=b'])
+    assert.deepEqual(splitJvmArgs(undefined), [])
   })
 
   it('supprime l\'instance et son dossier de jeu', async () => {

@@ -1,4 +1,15 @@
-import { join } from 'node:path'
+import { join, resolve, sep } from 'node:path'
+
+/**
+ * Chemin sous `root`, en refusant tout ce qui en sortirait ("../", chemin absolu, nom vide).
+ * À utiliser pour tout chemin venu de l'extérieur : IPC, fichiers d'un modpack, contenu d'une archive.
+ */
+export function insideDir(root: string, ...parts: string[]): string {
+  const base = resolve(root)
+  const target = resolve(base, ...parts)
+  if (!target.startsWith(base + sep)) throw new Error(`Chemin refusé (hors du dossier) : ${parts.join('/')}`)
+  return target
+}
 
 /** Dossiers d'une instance/installation Minecraft. Tout est relatif à `root`. */
 export function gamePaths(root: string) {

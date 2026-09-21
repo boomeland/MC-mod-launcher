@@ -1,0 +1,65 @@
+# Publie une release GitHub avec les .exe Windows à chaque tag de version poussé.
+#   git tag v0.2.0 && git push origin v0.2.0   → release v0.2.0 (liens du README mis à jour)
+#   git tag v0.2.0-test.1 && git push …        → pré-release (ignorée par les liens « latest » du README)
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write # créer la release et y joindre les fichiers
+
+jobs:
+  release:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 26
+          cache: npm
+
+      # Évite une release « v0.2.0 » qui contiendrait en réalité la 0.1.0 (version oubliée dans package.json).
+      - name: Vérifier que le tag correspond à package.json
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          pkg=$(node -p "require('./package.json').version")
+          case "$tag" in
+            "$pkg" | "$pkg"-*) echo "Version $tag" ;;
+            *) echo "::error::Le tag $GITHUB_REF_NAME ne correspond pas à la version $pkg de package.json"; exit 1 ;;
+          esac
+
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+
+      # .env n'est pas dans le dépôt : le client_id Microsoft vient d'un secret. Sans lui, la connexion Microsoft
+      # serait cassée dans l'exe publié, donc on préfère échouer.
+      - name: Écrire .env
+        env:
+          MSA_CLIENT_ID: ${{ secrets.MSA_CLIENT_ID }}
+        run: |
+          [ -n "$MSA_CLIENT_ID" ] || { echo "::error::Secret MSA_CLIENT_ID manquant"; exit 1; }
+          echo "MAIN_VITE_MSA_CLIENT_ID=$MSA_CLIENT_ID" > .env
+
+      # --publish never : sur un tag, electron-builder publierait lui-même ; c'est l'étape suivante qui s'en charge.
+      - name: Construire les .exe
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false' # pas de certificat de signature
+        run: npm run dist -- --publish never
+
+      - name: Créer la release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          flags=()
+          [[ "$GITHUB_REF_NAME" == *-* ]] && flags+=(--prerelease)
+          gh release create "$GITHUB_REF_NAME" \
+            dist/MC-Mod-Launcher-Setup.exe dist/MC-Mod-Launcher-Portable.exe \
+            --title "MC Mod Launcher ${GITHUB_REF_NAME#v}" \
+            --generate-notes "${flags[@]}"

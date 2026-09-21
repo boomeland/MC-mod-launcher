@@ -1,10 +1,12 @@
 import type { LauncherApi } from '../shared/api'
 import { initAccount } from './account'
 import { initCreateForm } from './create'
+import { initDiscover, openDiscover } from './discover'
 import { $ } from './dom'
-import { initFtb, openDiscover } from './ftb'
 import { initInstances } from './instances'
+import { initMods } from './mods'
 import { initPlay } from './play'
+import { initSettings } from './settings'
 
 declare global {
   interface Window {
@@ -12,12 +14,15 @@ declare global {
   }
 }
 
+// Mods et Réglages s'abonnent aux changements d'instance : à initialiser avant le premier rendu (initInstances).
+initSettings()
+initMods()
 initInstances()
 initCreateForm()
-initFtb()
+initDiscover()
 initAccount()
 initPlay()
 
 // Vue vide : les deux façons de commencer.
 $('empty-create').addEventListener('click', () => $('new-instance').click())
-$('empty-discover').addEventListener('click', () => void openDiscover())
+$('empty-discover').addEventListener('click', openDiscover)

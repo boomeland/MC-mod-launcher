@@ -2,7 +2,7 @@
 
 Un launcher Minecraft Java fait maison, pour remplacer le launcher officiel. Le but final : lancer du Minecraft **moddé (Forge en priorité)**.
 
-> État actuel : instances (Vanilla / Forge / NeoForge / Fabric, dossier de jeu séparé) et **modpacks FTB** (62 packs sur 94), testées en Forge 1.20.1 et 1.12.2, NeoForge 1.21.1, FTB Ultimate Anniversary (1.16.5). L'auth Microsoft marche jusqu'à l'étape finale et attend l'approbation de Mojang.
+> État actuel : instances (Vanilla / Forge / NeoForge / Fabric, dossier de jeu séparé), **gestion des mods** (Modrinth, .jar locaux, mises à jour) et **modpacks Modrinth et FTB**, testés en jeu (Forge 1.20.1 et 1.12.2, NeoForge 1.21.1, FTB Ultimate Anniversary, Fabulously Optimized). L'auth Microsoft marche jusqu'à l'étape finale et attend l'approbation de Mojang.
 
 ## Télécharger
 
@@ -31,6 +31,7 @@ Les API externes utilisées :
 - **Microsoft / Xbox / Minecraft Services** : connexion au compte.
 - **Maven Forge / NeoForge, meta Fabric** : versions et installation des loaders.
 - **FTB** (`api.feed-the-beast.com`) : catalogue et fichiers des modpacks.
+- **Modrinth** (`api.modrinth.com`, sans clé) : mods et modpacks (`.mrpack`).
 
 ## Lancer le projet
 
@@ -44,6 +45,7 @@ npm test                # tests automatisés (node:test via tsx)
 npm run dist            # .exe Windows dans dist/ : installeur + version portable (electron-builder)
 npm run cli -- 1.20.1 [pseudo] [--forge[=v] | --neoforge[=v] | --fabric[=v]] [--instance=nom] [--dry]   # teste le cœur sans interface
 npm run cli -- ftb:93 --instance=nom [--dry]   # installe (et lance) un modpack FTB par son id
+npm run cli -- mr:fabulously-optimized --instance=nom [--dry]   # idem pour un modpack Modrinth (id ou slug)
 ```
 
 Avec `--dry`, le CLI installe la version et affiche seulement la commande de lancement. Ses données vont dans `.cli-data/` (ignoré par git).
@@ -102,21 +104,35 @@ Pas d'installer : l'API `meta.fabricmc.net` fournit directement un JSON de versi
 
 Dans le code, Forge, NeoForge et Fabric implémentent la même interface `Loader` (`listVersions`, `install`) : l'IPC et le CLI ne connaissent que cette interface.
 
-### Modpacks FTB
+### Modpacks (Modrinth et FTB)
 
-La page « Modpacks FTB » affiche le catalogue de l'API publique FTB (sans clé) en grille de cartes, filtrable par loader. Choisir un pack, sa version et la RAM (par défaut, celle recommandée par le pack) crée une instance et y télécharge les fichiers du pack. L'instance garde l'icône et l'image du pack, qui servent de tuile et de bannière.
+La page « Modpacks » a deux sources, **Modrinth** (recherche paginée dans ~18 000 packs) et **FTB** (catalogue de ~100 packs), filtrables par loader. Choisir un pack, sa version et la RAM crée une instance et y installe le pack. L'instance garde l'icône et l'image du pack (tuile et bannière).
 
-- Pour chaque version, l'API donne Minecraft, le loader et **tous les fichiers avec une URL directe et un SHA1**, mods hébergés chez CurseForge compris. Le téléchargeur commun suffit, et les fichiers réservés au serveur sont ignorés.
-- La version du loader donnée par FTB (`47.4.20`) est retrouvée dans la liste du loader (`1.20.1-47.4.20`).
-- **Sécurité :** les chemins de fichiers viennent d'un serveur distant. Un chemin qui sortirait du dossier de l'instance (`../`, chemin absolu) fait échouer toute l'installation (couvert par les tests).
+Dans le code, les deux sources implémentent la même interface `ModpackSource` (`search`, `getPack`, `prepare`) : `prepare` lit le pack et résout le loader, puis l'instance est créée, puis `install` pose les fichiers. Ce découpage vient de Modrinth, où la version exacte du loader n'est connue qu'en ouvrant le `.mrpack`.
+
+- **FTB** : pour chaque version, l'API donne Minecraft, le loader et tous les fichiers avec une URL directe et un SHA1 (mods hébergés chez CurseForge compris). La RAM par défaut est celle recommandée par le pack.
+- **Modrinth** : un `.mrpack` est un zip avec un index (fichiers à télécharger, versions de Minecraft et du loader) et des dossiers `overrides/` et `client-overrides/` copiés dans le dossier de jeu. Le `.mrpack` est gardé en cache (`minecraft/modpacks/`). Modrinth ne publie pas de RAM recommandée : 4 Go par défaut.
+- La version du loader donnée par le pack (`47.4.20`) est retrouvée dans la liste du loader (`1.20.1-47.4.20`).
+- **Sécurité :** chemins de fichiers, entrées de l'archive (*zip slip*) et hôtes de téléchargement viennent d'un serveur distant. Un chemin qui sortirait du dossier de l'instance, ou un hôte hors de la liste autorisée par la spécification `.mrpack`, fait échouer toute l'installation (couvert par les tests).
 - Si l'installation échoue, l'instance à moitié remplie est supprimée.
-- **Non pris en charge (32 packs) :** Minecraft ≤ 1.9, c'est-à-dire les packs 1.4.7 à 1.7.10 (assets « legacy » non gérés, et avant 1.6, pas d'installer Forge). Ils apparaissent grisés.
-- La plupart des packs demandent 4 à 8 Go de RAM.
+- **Non pris en charge :** Minecraft ≤ 1.9 (assets « legacy », et avant 1.6 pas d'installer Forge) et Quilt. Ces packs apparaissent grisés.
+
+### Mods
+
+Onglet **Mods** d'une instance avec loader (masqué pour Vanilla) :
+
+- liste des `.jar` de `mods/`, avec le **nom et l'icône Modrinth** quand le fichier y est reconnu (par SHA1, même s'il a été ajouté à la main) ;
+- **activer / désactiver** (renommage en `.jar.disabled`, la convention des launchers), **supprimer** ;
+- **ajouter des `.jar`** par le bouton (sélecteur de fichiers) ou par **glisser-déposer** ;
+- **rechercher sur Modrinth**, filtré sur le loader et la version de Minecraft de l'instance, et installer en un clic avec les **dépendances obligatoires** (ex. Sodium Extra → Fabric API et Sodium) ;
+- **mises à jour** : Modrinth indique la dernière version compatible de chaque fichier. Un mod installé en version stable ne se voit pas proposer une bêta.
+
+Rien n'est mémorisé à part : l'état vient du dossier `mods/` lui-même. Les modifications sont bloquées pendant qu'un jeu tourne (fichiers verrouillés sous Windows). Une instance NeoForge 1.20.1 accepte aussi les mods Forge.
 
 ### Interface
 
-- **Barre latérale** : navigation (Bibliothèque, Modpacks FTB), liste des instances avec leur tuile, compte en bas (pseudo hors-ligne ou Microsoft).
-- **Vue instance** : bannière (image du pack, ou halo à la couleur du loader), bouton Jouer qui porte l'état de la partie (Préparation…, En jeu), onglets Console et Réglages (nom, mémoire, suppression).
+- **Barre latérale** : navigation (Bibliothèque, Modpacks), liste des instances avec leur tuile, compte en bas (pseudo hors-ligne ou Microsoft).
+- **Vue instance** : bannière (image du pack, ou halo à la couleur du loader), bouton Jouer qui porte l'état de la partie (Préparation…, En jeu), onglets Console, Mods et Réglages (nom, **version de Minecraft et du loader**, mémoire, **arguments JVM**, suppression).
 - **Barre d'état** en bas : étape en cours et progression des téléchargements, quelle que soit la page.
 - Thème sombre défini par des variables CSS (`:root` de `style.css`), une couleur par loader.
 
@@ -128,6 +144,15 @@ La page « Modpacks FTB » affiche le catalogue de l'API publique FTB (sans clé
 - `dist/MC-Mod-Launcher-Portable.exe` : se lance sans installation (démarrage un peu plus lent : il se décompresse à chaque lancement).
 
 L'icône vient de `build/icon.png` (512 px, convertie en `.ico` par electron-builder). Le `client_id` Microsoft de `.env` est intégré au build : ce n'est pas un secret (client public, device code flow). L'app packagée garde ses données dans `%APPDATA%\mc-mod-launcher\`, comme en dev, et retrouve donc les instances et les fichiers déjà téléchargés.
+
+**Publier une nouvelle version** : c'est automatique via GitHub Actions (`.github/workflows/release.yml`).
+
+```bash
+# 1. monter "version" dans package.json (ex. 0.2.0), commiter, pousser
+git tag v0.2.0 && git push origin v0.2.0
+```
+
+GitHub vérifie que le tag correspond à `package.json`, lance typecheck et tests, compile les deux `.exe` sur une machine Windows, puis crée la release : les liens « Télécharger » du README pointent aussitôt dessus. Un tag avec suffixe (`v0.2.0-test.1`) produit une **pré-release**, ignorée par ces liens, pour tester. Le `client_id` Microsoft vient du secret de dépôt `MSA_CLIENT_ID`.
 
 Les exécutables **ne sont pas signés** : au premier lancement, Windows SmartScreen affiche « Windows a protégé votre ordinateur » → « Informations complémentaires » → « Exécuter quand même ».
 
@@ -188,8 +213,14 @@ src/
 │   │   ├── fabric.ts      versions et JSON de version (meta Fabric, sans installer)
 │   │   ├── installer.ts   commun : vanilla → installer officiel en headless → marqueur
 │   │   └── maven.ts       lecture d'un maven-metadata.xml
-│   ├── modpacks/
-│   │   └── ftb.ts         catalogue FTB, résolution du loader, fichiers du pack
+│   ├── modpacks/      Sources de modpacks
+│   │   ├── index.ts       interface ModpackSource + table PACK_SOURCES
+│   │   ├── common.ts      résolution du loader, hôtes d'images, taille de page
+│   │   ├── ftb.ts         catalogue FTB, fichiers du pack
+│   │   └── modrinth.ts    recherche, .mrpack (index, overrides, hôtes autorisés)
+│   ├── modrinth.ts    client de l'API Modrinth (partagé mods / modpacks)
+│   ├── mods.ts        mods locaux : liste, activation, suppression, ajout (noms validés)
+│   ├── modrinth-mods.ts  mods Modrinth : recherche, installation avec dépendances, mises à jour
 │   ├── log4j.ts       décodage des logs XML du jeu
 │   └── msa/           Connexion Microsoft
 │       ├── oauth.ts       device code flow, refresh
@@ -202,16 +233,19 @@ src/
 │   ├── window.ts      création de la fenêtre
 │   ├── config.ts      client_id Microsoft (.env), dossiers partagé et des instances
 │   ├── accounts.ts    stockage chiffré du refresh token
-│   └── ipc/           un fichier par domaine : versions, instances, modpacks, auth, game
+│   └── ipc/           un fichier par domaine : versions, instances, modpacks, mods, auth, game
 ├── preload/     Pont sécurisé entre l'interface et le main (window.launcher)
 ├── renderer/    Interface, un module par zone
 │   ├── main.ts        point d'entrée
 │   ├── instances.ts   barre latérale des instances ; vue instance (bannière, Console, Réglages)
 │   ├── create.ts      boîte « Nouvelle instance » (version, loader et sa version, RAM)
-│   ├── ftb.ts         page « Modpacks FTB » (grille, filtres) et fiche d'installation
+│   ├── discover.ts    page « Modpacks » (sources, recherche, filtres) et fiche d'installation
+│   ├── mods.ts        onglet Mods et recherche de mods Modrinth
+│   ├── settings.ts    onglet Réglages (nom, version, mémoire, JVM, suppression)
+│   ├── version-picker.ts  sélecteur version MC + loader (création et Réglages)
 │   ├── account.ts     compte (bas de la barre latérale) : Microsoft / hors-ligne
 │   ├── play.ts        bouton Jouer et ses états, progression, logs
-│   ├── views.ts       bascule entre les vues (instance, vide, Modpacks FTB)
+│   ├── views.ts       bascule entre les vues (instance, vide, Modpacks)
 │   └── status.ts, dom.ts   helpers (barre d'état, console, création d'éléments, tuiles)
 └── shared/      Types partagés entre main et renderer
 scripts/cli.mts  Lancement en ligne de commande, sans interface
@@ -239,7 +273,10 @@ Les données sont dans le dossier `userData` d'Electron (`%APPDATA%/mc-mod-launc
 - [x] **Fabric** : installation testée (`--dry`, 1.20.1)
 - [x] **Modpacks FTB** : 62 packs pris en charge sur 94 ; le loader des 62 est résolu sans échec. FTB Ultimate Anniversary (1.16.5, Forge) installé et lancé à 2 Go, via le CLI et via l'interface
 - [x] Bouton « Jouer » depuis l'interface Electron (jeu lancé, logs affichés, fin de partie détectée)
-- [x] Tests automatisés (25 tests) : instances, versions NeoForge, versions et fichiers FTB (chemins hors dossier), décodage des logs
+- [x] Tests automatisés (40 tests) : instances (dont changement de version et arguments JVM), mods locaux (noms reçus par IPC), versions NeoForge, fichiers FTB et `.mrpack` (chemins, hôtes, zip slip), décodage des logs
+- [x] **Gestion des mods** (onglet Mods) : liste avec noms et icônes Modrinth, activer / désactiver, supprimer, ajouter des `.jar` (bouton et glisser-déposer), recherche Modrinth avec dépendances, mises à jour. Vérifié en jeu : JEI installé depuis l'interface et chargé par NeoForge 1.21.1
+- [x] **Modpacks Modrinth** : recherche, installation, lancement. Vérifié en jeu : Fabulously Optimized 6.5.0 (Fabric 1.21.1, 151 mods chargés) installé et lancé depuis l'interface
+- [x] **Instances** : renommer, changer la version de Minecraft et du loader, arguments JVM (vérifiés sur la ligne de commande Java, guillemets compris)
 - [x] **Exécutable Windows** (installeur + portable, icône) : l'app packagée démarre, appelle le main et lit les données au même endroit qu'en dev
 
 ### Codé mais non testé
@@ -248,11 +285,10 @@ Les données sont dans le dossier `userData` d'Electron (`%APPDATA%/mc-mod-launc
 - [ ] Bouton « Ouvrir le dossier » (ouvre l'explorateur, non exercé par le test automatisé)
 
 ### À faire
-- [ ] **Gestion des mods** : ajout, suppression, activation depuis l'interface (aujourd'hui : dépôt manuel dans `mods/`)
-- [ ] **Modpacks** : Modrinth (`.mrpack`) puis CurseForge (clé API requise) ; interface « source de modpacks » à extraire à ce moment-là
-- [ ] FTB : packs 1.6.4 / 1.7.10 (assets legacy), puis 1.4.7 / 1.5.2 (pas d'installer Forge) ; mise à jour d'un pack installé
+- [ ] Modpacks : CurseForge (clé API requise), import d'un `.mrpack` local, mise à jour d'un pack installé
+- [ ] FTB : packs 1.6.4 / 1.7.10 (assets legacy), puis 1.4.7 / 1.5.2 (pas d'installer Forge)
 - [ ] Quilt
-- [ ] Instances : renommer, dupliquer, changer la version, arguments JVM
+- [ ] Instances : dupliquer, liste des mondes et captures d'écran
 - [ ] Gestion de plusieurs comptes
 - [ ] Signature de code des `.exe` (certificat), mise à jour automatique
 - [ ] Tests automatisés du reste du cœur (règles, résolution des librairies, fusion des versions)
