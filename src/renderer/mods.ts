@@ -4,7 +4,7 @@ import type { ModHit, ModIdentity, ModUpdate } from '../core/modrinth-mods'
 import type { LocalMod } from '../core/mods'
 import { $, el, tile } from './dom'
 import { getSelectedInstance, isBusy, LOADER_NAMES, onInstanceChange, shortLoaderVersion } from './instances'
-import { setStatus } from './status'
+import { errorText, setStatus } from './status'
 
 const panel = $('tab-mods')
 const list = $<HTMLUListElement>('mods-list')
@@ -37,7 +37,7 @@ async function run(action: () => Promise<unknown>, done?: string) {
     await action()
     if (done) setStatus(done)
   } catch (e) {
-    setStatus(`Erreur : ${(e as Error).message}`)
+    setStatus(`Erreur : ${errorText(e)}`)
   }
   await load()
 }
@@ -137,7 +137,7 @@ function resultRow(h: ModHit, installed: Set<string>): HTMLElement {
       renderResults() // les résultats ont pu être redessinés pendant l'installation, avec l'ancien état « installé »
     } catch (e) {
       Object.assign(btn, { disabled: false, textContent: 'Installer' })
-      setStatus(`Erreur : ${(e as Error).message}`)
+      setStatus(`Erreur : ${errorText(e)}`)
     }
   })
   return el(
@@ -167,7 +167,7 @@ async function search(append = false) {
     total = r.total
     renderResults()
   } catch (e) {
-    if (req === searchRequest) results.replaceChildren(el('li', { className: 'mods-empty' }, `Erreur : ${(e as Error).message}`))
+    if (req === searchRequest) results.replaceChildren(el('li', { className: 'mods-empty' }, `Erreur : ${errorText(e)}`))
   }
 }
 
@@ -205,7 +205,7 @@ export function initMods() {
       render()
       setStatus(found.length ? `${found.length} mise(s) à jour disponible(s)` : 'Tous les mods sont à jour')
     } catch (e) {
-      setStatus(`Erreur : ${(e as Error).message}`)
+      setStatus(`Erreur : ${errorText(e)}`)
     }
   })
   $('mods-update-all').addEventListener('click', () => void applyUpdates([...updates.values()]))

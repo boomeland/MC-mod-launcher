@@ -1,6 +1,6 @@
 // Zone compte (bas de la barre latérale) : hors-ligne, connexion Microsoft en cours (code à saisir), connecté.
 import { $ } from './dom'
-import { setStatus } from './status'
+import { errorText, setStatus } from './status'
 
 const accountOut = $('account-out')
 const accountPending = $('account-pending')
@@ -44,7 +44,7 @@ export function initAccount() {
       void syncOfflineLock()
     } catch (e) {
       showAccount(null)
-      setStatus(`Erreur : ${(e as Error).message}`)
+      setStatus(`Erreur : ${errorText(e)}`)
     }
   })
   $('cancel').addEventListener('click', () => window.launcher.cancelLogin())

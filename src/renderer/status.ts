@@ -9,6 +9,9 @@ export function setStatus(text: string) {
   status.textContent = text
 }
 
+/** Message d'une erreur, sans l'enveloppe qu'Electron ajoute aux rejets d'IPC (« Error invoking remote method 'x': Error: »). */
+export const errorText = (e: unknown) => (e as Error).message.replace(/^Error invoking remote method '[^']*': (\w*Error: )?/, '')
+
 /** `ratio` entre 0 et 1. */
 export function setProgress(ratio: number) {
   fill.style.width = `${ratio * 100}%`

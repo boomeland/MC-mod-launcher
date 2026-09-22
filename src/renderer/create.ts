@@ -1,7 +1,7 @@
 // Boîte de dialogue « Nouvelle instance » : nom, version de Minecraft et loader (sélecteur partagé), RAM.
 import { $ } from './dom'
 import { LOADER_NAMES, refreshInstances } from './instances'
-import { setStatus } from './status'
+import { errorText, setStatus } from './status'
 import { createVersionPicker } from './version-picker'
 
 const dialog = $<HTMLDialogElement>('create-dialog')
@@ -42,7 +42,7 @@ export function initCreateForm() {
       await refreshInstances(instance.id)
       setStatus(`Instance « ${instance.name} » créée`)
     } catch (err) {
-      setStatus(`Erreur : ${(err as Error).message}`)
+      setStatus(`Erreur : ${errorText(err)}`)
     } finally {
       submitBtn.disabled = false
     }

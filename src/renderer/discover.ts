@@ -2,7 +2,7 @@
 import type { PackDetail, PackSourceId, PackSummary, PackVersion } from '../core/modpacks'
 import { $, el, tile } from './dom'
 import { LOADER_NAMES, refreshInstances } from './instances'
-import { setProgress, setStatus } from './status'
+import { errorText, setProgress, setStatus } from './status'
 import { showView } from './views'
 
 const grid = $('packs-grid')
@@ -58,7 +58,7 @@ async function load(append = false) {
     total = r.total
     renderGrid()
   } catch (e) {
-    if (req === request) grid.replaceChildren(el('p', { className: 'grid-message' }, `Impossible de charger les modpacks : ${(e as Error).message}`))
+    if (req === request) grid.replaceChildren(el('p', { className: 'grid-message' }, `Impossible de charger les modpacks : ${errorText(e)}`))
   }
 }
 
@@ -101,7 +101,7 @@ async function openPack(p: PackSummary) {
     renderMemory()
   } catch (e) {
     versionSel.replaceChildren(new Option('Erreur de chargement', ''))
-    setStatus(`Erreur : ${(e as Error).message}`)
+    setStatus(`Erreur : ${errorText(e)}`)
   }
 }
 
@@ -143,7 +143,7 @@ export function initDiscover() {
       setProgress(1)
       setStatus(`Modpack « ${instance.name} » installé`)
     } catch (err) {
-      setStatus(`Erreur : ${(err as Error).message}`)
+      setStatus(`Erreur : ${errorText(err)}`)
     } finally {
       installing = false
     }
