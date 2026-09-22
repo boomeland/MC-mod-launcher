@@ -2,7 +2,7 @@
 // Les onglets Mods et Réglages vivent dans leurs propres modules, abonnés via onInstanceChange.
 import type { Instance } from '../core/instances'
 import { $, el, tile } from './dom'
-import { setStatus } from './status'
+import { errorText, setStatus } from './status'
 import { currentView, showView } from './views'
 
 type Tab = 'console' | 'mods' | 'settings'
@@ -121,7 +121,7 @@ export function initInstances() {
     try {
       await window.launcher.openInstanceFolder(sel.id)
     } catch (e) {
-      setStatus(`Erreur : ${(e as Error).message}`)
+      setStatus(`Erreur : ${errorText(e)}`)
     }
   })
 

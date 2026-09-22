@@ -1,6 +1,6 @@
 # boomLauncher
 
-**boomLauncher** is a free, open-source (MIT) Minecraft: Java Edition launcher for Windows, focused on modded play. It creates separate game instances for Vanilla, Forge, NeoForge and Fabric, installs mods and modpacks from Modrinth and Feed The Beast, and downloads the right Java runtime automatically. Players sign in with their own Microsoft account (device code flow, in their browser); the refresh token is stored encrypted on their computer, and the launcher has no server, analytics or telemetry. See the [privacy policy](PRIVACY.md).
+**boomLauncher** is a free, open-source (MIT) Minecraft: Java Edition launcher for Windows, focused on modded play. It creates separate game instances for Vanilla, Forge, NeoForge and Fabric, installs mods and modpacks from Modrinth and Feed The Beast, and downloads the right Java runtime automatically. Players sign in with their own Microsoft account (device code flow, in their browser) and must own Minecraft: Java Edition; offline play only unlocks once ownership has been confirmed. The refresh token is stored encrypted on their computer, and the launcher has no server, analytics or telemetry. See the [privacy policy](PRIVACY.md).
 
 *Documentation below is in French.*
 
@@ -196,7 +196,7 @@ Code appareil → Token Microsoft → Xbox Live → XSTS → Minecraft Services 
 ```
 
 - Le **refresh token** est stocké chiffré (`safeStorage` d'Electron, donc DPAPI sous Windows). Il est rafraîchi avant chaque lancement, ce qui évite de se reconnecter.
-- Sans compte connecté, on peut jouer en **hors-ligne** avec un pseudo libre (pratique en dev, ou pour les serveurs offline).
+- Le mode **hors-ligne** (pseudo libre, pour les serveurs offline) ne se débloque qu'après **une connexion réussie** avec un compte qui possède Minecraft, comme dans le launcher officiel : sans le jeu, Minecraft Services renvoie 404 et la connexion échoue. La marque (`owner-verified` dans les données de l'app) survit à la déconnexion. Le main refuse le lancement sans elle, le renderer ne fait que griser le champ. En dev (`npm run dev`, app non packagée), le hors-ligne reste toujours ouvert pour les tests.
 
 **Configuration requise :** il faut une app Azure (gratuite) avec les comptes personnels Microsoft activés et **Allow public client flows**. Son *Application (client) ID* va dans `.env` sous `MAIN_VITE_MSA_CLIENT_ID`. Mojang doit aussi approuver l'app (formulaire *Minecraft API app registration*, `aka.ms/AppRegInfo`), sinon l'étape finale peut renvoyer une erreur 403.
 

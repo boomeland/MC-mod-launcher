@@ -1,5 +1,5 @@
 import { app, safeStorage } from 'electron'
-import { readFile, rm, writeFile } from 'node:fs/promises'
+import { access, readFile, rm, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 
 interface Stored {
@@ -29,4 +29,23 @@ export async function loadAccount(): Promise<{ name: string; uuid: string; refre
 
 export async function clearAccount(): Promise<void> {
   await rm(file(), { force: true })
+}
+
+// Le mode hors-ligne n'est offert qu'à qui a prouvé une fois posséder Minecraft (connexion réussie : sans le jeu,
+// Minecraft Services renvoie 404 et la connexion échoue), comme le launcher officiel : un launcher qui fait jouer
+// sans compte est refusé par Mojang. La marque survit à la déconnexion. Elle se falsifie en créant le fichier :
+// elle ne protège de rien, elle évite seulement de proposer le jeu à qui ne l'a pas acheté.
+const ownerFile = () => join(app.getPath('userData'), 'owner-verified')
+
+export async function markOwnershipVerified(): Promise<void> {
+  await writeFile(ownerFile(), '')
+}
+
+export async function offlineAllowed(): Promise<boolean> {
+  // En dev, tous les tests passent par le hors-ligne tant que Mojang n'a pas approuvé l'app (403 à la connexion).
+  if (!app.isPackaged) return true
+  return access(ownerFile()).then(
+    () => true,
+    () => false
+  )
 }

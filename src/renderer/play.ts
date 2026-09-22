@@ -1,7 +1,7 @@
 // Bouton Jouer, progression des téléchargements (barre d'état) et logs du jeu.
 import { $ } from './dom'
 import { getSelectedInstance, setBusy, showTab } from './instances'
-import { appendLog, clearLog, setProgress, setStatus } from './status'
+import { appendLog, clearLog, errorText, setProgress, setStatus } from './status'
 
 const playBtn = $<HTMLButtonElement>('play')
 const playLabel = $('play-label')
@@ -37,7 +37,7 @@ export function initPlay() {
       setStatus(`${instance.name} est lancé`)
       setProgress(1)
     } catch (e) {
-      setStatus(`Erreur : ${(e as Error).message}`)
+      setStatus(`Erreur : ${errorText(e)}`)
       setPlayState('ready')
     }
   })

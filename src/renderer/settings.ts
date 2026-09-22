@@ -2,7 +2,7 @@
 import type { Instance, InstancePatch } from '../core/instances'
 import { $ } from './dom'
 import { getSelectedInstance, gigabytes, isBusy, onInstanceChange, refreshInstances, showTab } from './instances'
-import { setStatus } from './status'
+import { errorText, setStatus } from './status'
 import { createVersionPicker } from './version-picker'
 
 const renameIn = $<HTMLInputElement>('inst-rename')
@@ -34,7 +34,7 @@ async function update(patch: InstancePatch, done?: string) {
     await refreshInstances()
     if (done) setStatus(done)
   } catch (e) {
-    setStatus(`Erreur : ${(e as Error).message}`)
+    setStatus(`Erreur : ${errorText(e)}`)
   }
 }
 
@@ -75,7 +75,7 @@ export function initSettings() {
       await refreshInstances(null)
       setStatus('Instance supprimée')
     } catch (e) {
-      setStatus(`Erreur : ${(e as Error).message}`)
+      setStatus(`Erreur : ${errorText(e)}`)
     }
   })
 }

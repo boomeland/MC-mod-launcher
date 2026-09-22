@@ -17,7 +17,7 @@ export interface LoginCode {
 
 export interface PlayOptions {
   instanceId: string
-  /** N'est utilisé que si aucun compte Microsoft n'est connecté. */
+  /** N'est utilisé que si aucun compte Microsoft n'est connecté, et refusé tant que offlineAllowed() est faux. */
   offlineName: string
 }
 
@@ -66,6 +66,8 @@ export interface LauncherApi {
 
   /** Pseudo du compte Microsoft connecté, ou null. */
   getAccount(): Promise<string | null>
+  /** Faux tant qu'aucune connexion n'a prouvé que le joueur possède Minecraft (toujours vrai en dev). */
+  offlineAllowed(): Promise<boolean>
   /** Lance la connexion ; résout avec le pseudo une fois validée dans le navigateur. */
   login(): Promise<string>
   cancelLogin(): void

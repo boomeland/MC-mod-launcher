@@ -70,7 +70,7 @@ Trois frontières seulement, mais elles comptent :
 
 ## État courant
 
-- **Auth Microsoft** : device code, Xbox Live et XSTS validés contre les vrais serveurs. L'étape finale `login_with_xbox` renvoie 403 tant que Mojang n'a pas approuvé l'app Azure (`aka.ms/AppRegInfo`). **Mojang a refusé la première demande (22/09/2026)** : le launcher a été renommé de « MC Mod Launcher » en « boomLauncher » à la suite de ce refus. Le mode hors-ligne sert en attendant.
+- **Auth Microsoft** : device code, Xbox Live et XSTS validés contre les vrais serveurs. L'étape finale `login_with_xbox` renvoie 403 tant que Mojang n'a pas approuvé l'app Azure (`aka.ms/AppRegInfo`). **Mojang a refusé la première demande (22/09/2026)** : le launcher a été renommé de « MC Mod Launcher » en « boomLauncher » à la suite de ce refus. **Hors-ligne verrouillé dans l'app packagée** tant qu'aucune connexion n'a prouvé la possession du jeu (fichier `owner-verified`, cf. `main/accounts.ts`) : en attendant l'approbation, on joue en dev ou via le CLI. Pour tester l'exe avec un profil isolé, créer `owner-verified` dans le `--user-data-dir`.
 - **Testé en lancement réel** : vanilla 1.21.1, Forge 1.20.1 (Java 17), Forge 1.12.2 (Java 8, ancien format de JSON), NeoForge 21.1.251 (MC 1.21.1, Java 21) les modpacks FTB Ultimate Anniversary (Forge 1.16.5) et Fabulously Optimized (Modrinth, Fabric 1.21.1), et un mod Modrinth (JEI) chargé par NeoForge, tous lancés depuis « Jouer » dans l'app.
 - Roadmap et détail du fonctionnement : **README.md** (ne pas dupliquer ici, ça périme).
 

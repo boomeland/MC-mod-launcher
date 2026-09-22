@@ -6,7 +6,7 @@ boomLauncher is a free, open-source Minecraft: Java Edition launcher for Windows
 
 ## What the launcher accesses
 
-**Your Microsoft account, only if you choose to sign in.** Sign-in uses Microsoft's device code flow: you enter a code on `microsoft.com/link`, in your own browser. The launcher never sees your password. It requests only the `XboxLive.signin` and `offline_access` scopes, which are needed to get a Minecraft session and to stay signed in.
+**Your Microsoft account.** Playing requires signing in once with a Microsoft account that owns Minecraft: Java Edition. Sign-in uses Microsoft's device code flow: you enter a code on `microsoft.com/link`, in your own browser. The launcher never sees your password. It requests only the `XboxLive.signin` and `offline_access` scopes, which are needed to get a Minecraft session and to stay signed in.
 
 After sign-in, the launcher keeps:
 
@@ -15,8 +15,9 @@ After sign-in, the launcher keeps:
 | Minecraft username and UUID | `%APPDATA%\mc-mod-launcher\account.json` | Show who is signed in, launch the game |
 | Microsoft refresh token | Same file, **encrypted** with the operating system's credential protection (Electron `safeStorage`, Windows DPAPI). If encryption is unavailable, it is not saved at all. | Stay signed in between sessions |
 | Minecraft access token | In memory only, passed to the game when it starts | Required by Minecraft to join online servers |
+| An empty `owner-verified` file | `%APPDATA%\mc-mod-launcher\` | Records that game ownership was confirmed once, which unlocks offline play |
 
-Signing out deletes `account.json`. You can also play offline without any account.
+Signing out deletes `account.json`. Offline play (for offline-mode servers) is only available after a successful sign-in has confirmed that you own the game.
 
 **Your game files.** Instances, mods, worlds and downloaded game files are stored in `%APPDATA%\mc-mod-launcher\` on your computer. Uninstalling the launcher leaves them there, so you do not lose your worlds; delete that folder to remove everything.
 

@@ -4,7 +4,7 @@ import type { Instance } from '../core/instances'
 import type { VersionInfo } from '../shared/api'
 import { $ } from './dom'
 import { LOADER_NAMES, shortLoaderVersion } from './instances'
-import { setStatus } from './status'
+import { errorText, setStatus } from './status'
 
 type Loader = Instance['loader']
 
@@ -64,7 +64,7 @@ export function createVersionPicker(prefix: string, radioName: string, onChange:
     } catch (e) {
       if (req !== request) return
       loaderVersionSel.replaceChildren(new Option('Erreur de chargement', ''))
-      setStatus(`Erreur : ${(e as Error).message}`)
+      setStatus(`Erreur : ${errorText(e)}`)
     }
   }
 
