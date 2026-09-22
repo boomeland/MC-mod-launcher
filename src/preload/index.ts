@@ -31,6 +31,7 @@ const api: LauncherApi = {
   onExit: (cb) => void ipcRenderer.on('game:exit', (_e, code) => cb(code)),
 
   getAccount: () => ipcRenderer.invoke('auth:account'),
+  offlineAllowed: () => ipcRenderer.invoke('auth:offline-allowed'),
   login: () => ipcRenderer.invoke('auth:login'),
   cancelLogin: () => ipcRenderer.send('auth:cancel'),
   logout: () => ipcRenderer.invoke('auth:logout'),

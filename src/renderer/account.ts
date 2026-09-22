@@ -19,6 +19,13 @@ function showAccount(name: string | null, pending = false) {
   }
 }
 
+/** Sans connexion préalable, le pseudo hors-ligne est grisé (le main refuse de toute façon de lancer). */
+async function syncOfflineLock() {
+  const allowed = await window.launcher.offlineAllowed()
+  usernameIn.disabled = !allowed
+  $('offline-label').textContent = allowed ? 'Pseudo hors-ligne' : 'Connecte-toi pour jouer'
+}
+
 export function initAccount() {
   const syncAvatar = () => ($('avatar').textContent = initial(usernameIn.value))
   usernameIn.addEventListener('input', syncAvatar)
@@ -34,6 +41,7 @@ export function initAccount() {
     try {
       showAccount(await window.launcher.login())
       setStatus('Connecté')
+      void syncOfflineLock()
     } catch (e) {
       showAccount(null)
       setStatus(`Erreur : ${(e as Error).message}`)
@@ -46,4 +54,5 @@ export function initAccount() {
   })
 
   window.launcher.getAccount().then((name) => showAccount(name))
+  void syncOfflineLock()
 }

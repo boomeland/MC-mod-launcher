@@ -10,15 +10,20 @@ import { createLogDecoder } from '../../core/log4j'
 import { loginWithRefreshToken } from '../../core/msa'
 import type { Account, Progress } from '../../core/types'
 import type { PlayOptions } from '../../shared/api'
-import { loadAccount, saveAccount } from '../accounts'
+import { loadAccount, offlineAllowed, saveAccount } from '../accounts'
 import { INSTANCES_DIR, MSA_CLIENT_ID, paths } from '../config'
 
 let running = false
 
-/** Compte Microsoft (token rafraîchi juste avant le lancement : il dure ~24 h) ou compte hors-ligne. */
+/** Compte Microsoft (token rafraîchi à chaque partie : il dure ~24 h) ou compte hors-ligne. */
 async function resolveAccount(offlineName: string): Promise<Account> {
   const stored = await loadAccount()
-  if (!stored) return offlineAccount(offlineName)
+  if (!stored) {
+    // Vérifié ici et pas seulement dans l'UI : l'IPC n'est pas une entrée fiable.
+    if (!(await offlineAllowed()))
+      throw new Error('Connecte-toi une première fois avec un compte Microsoft qui possède Minecraft : le mode hors-ligne sera ensuite disponible.')
+    return offlineAccount(offlineName)
+  }
   const r = await loginWithRefreshToken(MSA_CLIENT_ID, stored.refreshToken)
   await saveAccount(r.account.name, r.account.uuid, r.refreshToken)
   return r.account
@@ -38,6 +43,8 @@ export function registerGameIpc() {
     running = true
     const send = (channel: string, payload: unknown) => e.sender.send(channel, payload)
     try {
+      // Avant les téléchargements : un compte refusé ne doit pas coûter des centaines de Mo (le token dure ~24 h).
+      const account = await resolveAccount(offlineName)
       const instance = await getInstance(INSTANCES_DIR, instanceId)
       const gameDir = instanceGameDir(INSTANCES_DIR, instanceId)
       await mkdir(gameDir, { recursive: true })
@@ -51,7 +58,6 @@ export function registerGameIpc() {
               send('game:log', `[${instance.loader}] ${l}`)
             )
       const { resolved, javaPath } = await installVersion(paths, versionId, onProgress)
-      const account = await resolveAccount(offlineName)
 
       const proc = spawnGame(
         buildLaunchCommand(paths, resolved, {
