@@ -154,6 +154,8 @@ git tag v0.2.0 && git push origin v0.2.0
 
 GitHub vérifie que le tag correspond à `package.json`, lance typecheck et tests, compile les deux `.exe` sur une machine Windows, puis crée la release : les liens « Télécharger » du README pointent aussitôt dessus. Un tag avec suffixe (`v0.2.0-test.1`) produit une **pré-release**, ignorée par ces liens, pour tester. Le `client_id` Microsoft vient du secret de dépôt `MSA_CLIENT_ID`.
 
+**Mise à jour automatique** (version installée, depuis la 0.3.0) : au démarrage, le launcher lit `latest.yml` sur la dernière release GitHub (electron-updater). Si une version plus récente existe, il la télécharge en arrière-plan (téléchargement différentiel grâce au `.blockmap`), vérifie son SHA-512 et affiche une carte « Version X prête — Redémarrer » dans la barre latérale ; sans clic, elle s'installe à la fermeture. La version portable ne peut pas se remplacer elle-même : elle affiche seulement un lien vers la release. Le redémarrage est refusé pendant une partie. Sans signature de code, la confiance repose sur le compte GitHub qui publie les releases : garder la double authentification activée.
+
 Les exécutables **ne sont pas signés** : au premier lancement, Windows SmartScreen affiche « Windows a protégé votre ordinateur » → « Informations complémentaires » → « Exécuter quand même ».
 
 ### Logs du jeu
@@ -276,6 +278,7 @@ Les données sont dans le dossier `userData` d'Electron (`%APPDATA%/mc-mod-launc
 - [x] Tests automatisés (40 tests) : instances (dont changement de version et arguments JVM), mods locaux (noms reçus par IPC), versions NeoForge, fichiers FTB et `.mrpack` (chemins, hôtes, zip slip), décodage des logs
 - [x] **Gestion des mods** (onglet Mods) : liste avec noms et icônes Modrinth, activer / désactiver, supprimer, ajouter des `.jar` (bouton et glisser-déposer), recherche Modrinth avec dépendances, mises à jour. Vérifié en jeu : JEI installé depuis l'interface et chargé par NeoForge 1.21.1
 - [x] **Modpacks Modrinth** : recherche, installation, lancement. Vérifié en jeu : Fabulously Optimized 6.5.0 (Fabric 1.21.1, 151 mods chargés) installé et lancé depuis l'interface
+- [x] **Mise à jour automatique** du launcher installé (electron-updater + releases GitHub). Vérifiée de bout en bout : une 0.2.99 installée a trouvé la release 0.3.0, l'a téléchargée, installée en silence et s'est relancée en 0.3.0
 - [x] **Instances** : renommer, changer la version de Minecraft et du loader, arguments JVM (vérifiés sur la ligne de commande Java, guillemets compris)
 - [x] **Exécutable Windows** (installeur + portable, icône) : l'app packagée démarre, appelle le main et lit les données au même endroit qu'en dev
 
@@ -290,7 +293,7 @@ Les données sont dans le dossier `userData` d'Electron (`%APPDATA%/mc-mod-launc
 - [ ] Quilt
 - [ ] Instances : dupliquer, liste des mondes et captures d'écran
 - [ ] Gestion de plusieurs comptes
-- [ ] Signature de code des `.exe` (certificat), mise à jour automatique
+- [ ] Signature de code des `.exe` (certificat)
 - [ ] Tests automatisés du reste du cœur (règles, résolution des librairies, fusion des versions)
 
 ### Limites connues

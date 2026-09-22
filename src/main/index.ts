@@ -5,6 +5,7 @@ import { registerInstancesIpc } from './ipc/instances'
 import { registerModpacksIpc } from './ipc/modpacks'
 import { registerModsIpc } from './ipc/mods'
 import { registerVersionsIpc } from './ipc/versions'
+import { initUpdater } from './updater'
 import { createWindow } from './window'
 
 registerVersionsIpc()
@@ -14,5 +15,5 @@ registerModsIpc()
 registerAuthIpc()
 registerGameIpc()
 
-app.whenReady().then(createWindow)
+app.whenReady().then(() => initUpdater(createWindow()))
 app.on('window-all-closed', () => app.quit())

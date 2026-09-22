@@ -7,6 +7,7 @@ import { initInstances } from './instances'
 import { initMods } from './mods'
 import { initPlay } from './play'
 import { initSettings } from './settings'
+import { initUpdate } from './update'
 
 declare global {
   interface Window {
@@ -22,6 +23,7 @@ initCreateForm()
 initDiscover()
 initAccount()
 initPlay()
+initUpdate()
 
 // Vue vide : les deux façons de commencer.
 $('empty-create').addEventListener('click', () => $('new-instance').click())
