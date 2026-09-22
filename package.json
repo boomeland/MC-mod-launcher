@@ -1,6 +1,6 @@
 {
   "name": "mc-mod-launcher",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Launcher Minecraft moddé (Forge en priorité)",
   "author": "boomeland",
   "main": "./out/main/index.js",
