@@ -1,4 +1,4 @@
-# MC Mod Launcher
+# boomLauncher
 
 Un launcher Minecraft Java fait maison, pour remplacer le launcher officiel. Le but final : lancer du Minecraft **moddé (Forge en priorité)**.
 
