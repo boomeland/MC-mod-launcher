@@ -7,7 +7,7 @@ import { pipeline } from 'node:stream/promises'
 import type { ProgressFn } from './types'
 
 // Modrinth exige un User-Agent qui identifie le projet (sinon il peut limiter ou bloquer les requêtes).
-const UA = 'boomeland/MC-mod-launcher (github.com/boomeland/MC-mod-launcher)'
+const UA = 'boomeland/boomLauncher (github.com/boomeland/boomLauncher)'
 
 export async function fetchJson<T>(url: string): Promise<T> {
   const res = await fetch(url, { headers: { 'User-Agent': UA } })
