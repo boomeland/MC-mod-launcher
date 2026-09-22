@@ -1,6 +1,6 @@
 {
   "name": "mc-mod-launcher",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Launcher Minecraft moddé (Forge en priorité)",
   "author": "boomeland",
   "main": "./out/main/index.js",
@@ -15,7 +15,7 @@
   },
   "build": {
     "appId": "com.boomeland.mcmodlauncher",
-    "productName": "MC Mod Launcher",
+    "productName": "boomLauncher",
     "directories": {
       "output": "dist",
       "buildResources": "build"
@@ -27,7 +27,7 @@
       {
         "provider": "github",
         "owner": "boomeland",
-        "repo": "MC-mod-launcher"
+        "repo": "boomLauncher"
       }
     ],
     "win": {
@@ -40,10 +40,10 @@
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
-      "artifactName": "MC-Mod-Launcher-Setup.${ext}"
+      "artifactName": "boomLauncher-Setup.${ext}"
     },
     "portable": {
-      "artifactName": "MC-Mod-Launcher-Portable.${ext}"
+      "artifactName": "boomLauncher-Portable.${ext}"
     }
   },
   "devDependencies": {

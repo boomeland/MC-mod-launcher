@@ -3,7 +3,7 @@
 import { app, ipcMain, shell, type BrowserWindow } from 'electron'
 import { autoUpdater } from 'electron-updater'
 
-const RELEASES_PAGE = 'https://github.com/boomeland/MC-mod-launcher/releases/latest'
+const RELEASES_PAGE = 'https://github.com/boomeland/boomLauncher/releases/latest'
 
 export function initUpdater(win: BrowserWindow) {
   if (!app.isPackaged) return // en dev, il n'y a pas de version installée à remplacer

@@ -1,5 +1,11 @@
 # boomLauncher
 
+**boomLauncher** is a free, open-source (MIT) Minecraft: Java Edition launcher for Windows, focused on modded play. It creates separate game instances for Vanilla, Forge, NeoForge and Fabric, installs mods and modpacks from Modrinth and Feed The Beast, and downloads the right Java runtime automatically. Players sign in with their own Microsoft account (device code flow, in their browser); the refresh token is stored encrypted on their computer, and the launcher has no server, analytics or telemetry. See the [privacy policy](PRIVACY.md).
+
+*Documentation below is in French.*
+
+---
+
 Un launcher Minecraft Java fait maison, pour remplacer le launcher officiel. Le but final : lancer du Minecraft **moddé (Forge en priorité)**.
 
 > État actuel : instances (Vanilla / Forge / NeoForge / Fabric, dossier de jeu séparé), **gestion des mods** (Modrinth, .jar locaux, mises à jour) et **modpacks Modrinth et FTB**, testés en jeu (Forge 1.20.1 et 1.12.2, NeoForge 1.21.1, FTB Ultimate Anniversary, Fabulously Optimized). L'auth Microsoft marche jusqu'à l'étape finale et attend l'approbation de Mojang.
@@ -8,10 +14,10 @@ Un launcher Minecraft Java fait maison, pour remplacer le launcher officiel. Le 
 
 | Windows 10 / 11 (64 bits) | |
 |---|---|
-| [**⬇ Installeur** (MC-Mod-Launcher-Setup.exe)](https://github.com/boomeland/MC-mod-launcher/releases/latest/download/MC-Mod-Launcher-Setup.exe) | Installation classique : raccourcis, désinstallation depuis Windows. |
-| [**⬇ Version portable** (MC-Mod-Launcher-Portable.exe)](https://github.com/boomeland/MC-mod-launcher/releases/latest/download/MC-Mod-Launcher-Portable.exe) | Un seul fichier, à lancer sans installation. |
+| [**⬇ Installeur** (boomLauncher-Setup.exe)](https://github.com/boomeland/boomLauncher/releases/latest/download/boomLauncher-Setup.exe) | Installation classique : raccourcis, désinstallation depuis Windows. |
+| [**⬇ Version portable** (boomLauncher-Portable.exe)](https://github.com/boomeland/boomLauncher/releases/latest/download/boomLauncher-Portable.exe) | Un seul fichier, à lancer sans installation. |
 
-Toutes les versions : [page des releases](https://github.com/boomeland/MC-mod-launcher/releases).
+Toutes les versions : [page des releases](https://github.com/boomeland/boomLauncher/releases).
 
 > Les exécutables ne sont pas signés : au premier lancement, Windows affiche « Windows a protégé votre ordinateur ». Cliquer sur **Informations complémentaires**, puis **Exécuter quand même**. Java n'a pas besoin d'être installé : le launcher télécharge le bon runtime lui-même.
 
@@ -140,8 +146,8 @@ Rien n'est mémorisé à part : l'état vient du dossier `mods/` lui-même. Les 
 
 `npm run dist` compile l'app puis la package avec **electron-builder** (config : champ `build` de `package.json`) :
 
-- `dist/MC-Mod-Launcher-Setup.exe` : installeur (choix du dossier, raccourcis, désinstallation) ;
-- `dist/MC-Mod-Launcher-Portable.exe` : se lance sans installation (démarrage un peu plus lent : il se décompresse à chaque lancement).
+- `dist/boomLauncher-Setup.exe` : installeur (choix du dossier, raccourcis, désinstallation) ;
+- `dist/boomLauncher-Portable.exe` : se lance sans installation (démarrage un peu plus lent : il se décompresse à chaque lancement).
 
 L'icône vient de `build/icon.png` (512 px, convertie en `.ico` par electron-builder). Le `client_id` Microsoft de `.env` est intégré au build : ce n'est pas un secret (client public, device code flow). L'app packagée garde ses données dans `%APPDATA%\mc-mod-launcher\`, comme en dev, et retrouve donc les instances et les fichiers déjà téléchargés.
 
@@ -304,4 +310,4 @@ Les données sont dans le dossier `userData` d'Electron (`%APPDATA%/mc-mod-launc
 
 ## Légal
 
-Le launcher exige un vrai compte Minecraft Java pour l'auth Microsoft. Il ne redistribue aucun fichier de Mojang : tout est téléchargé depuis leurs serveurs.
+Le launcher exige un vrai compte Minecraft Java pour l'auth Microsoft. Il ne redistribue aucun fichier de Mojang : tout est téléchargé depuis leurs serveurs. Données stockées et services contactés : voir la [politique de confidentialité](PRIVACY.md) (en anglais).
