@@ -61,7 +61,7 @@ jobs:
           [[ "$GITHUB_REF_NAME" == *-* ]] && flags+=(--prerelease)
           # latest.yml (version + SHA-512) et le .blockmap servent à la mise à jour automatique du launcher installé.
           gh release create "$GITHUB_REF_NAME" \
-            dist/MC-Mod-Launcher-Setup.exe dist/MC-Mod-Launcher-Portable.exe \
-            dist/latest.yml dist/MC-Mod-Launcher-Setup.exe.blockmap \
-            --title "MC Mod Launcher ${GITHUB_REF_NAME#v}" \
+            dist/boomLauncher-Setup.exe dist/boomLauncher-Portable.exe \
+            dist/latest.yml dist/boomLauncher-Setup.exe.blockmap \
+            --title "boomLauncher ${GITHUB_REF_NAME#v}" \
             --generate-notes "${flags[@]}"

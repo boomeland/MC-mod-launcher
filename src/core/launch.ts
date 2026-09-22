@@ -17,7 +17,7 @@ export interface LaunchOptions {
   extraJvmArgs?: string[]
 }
 
-const LAUNCHER_NAME = 'mc-mod-launcher'
+const LAUNCHER_NAME = 'boomLauncher'
 // Lue dans package.json, seule source de la version : une release ne peut plus annoncer une version périmée au jeu.
 const LAUNCHER_VERSION = pkg.version
 

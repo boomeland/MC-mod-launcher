@@ -1,4 +1,4 @@
-# MC Mod Launcher
+# boomLauncher
 
 Launcher Minecraft Java (Electron + TypeScript) pour lancer du Minecraft moddé, Forge en priorité.
 
@@ -55,8 +55,9 @@ Trois frontières seulement, mais elles comptent :
 - **Forge / NeoForge : le jar vanilla doit être copié sous l'id de la version lancée** (`versions/<id>/<id>.jar`, fait dans `install.ts`) car Forge l'ignore par ce nom via `-DignoreList`. Sans ça : crash « Module minecraft contains package… ». Les librairies à URL vide sont générées par l'installer, donc non téléchargeables.
 - **Ne jamais tuer `java.exe` / `javaw.exe` par nom** pendant un test : ça fermerait le vrai Minecraft de l'utilisateur. Tuer par PID, en filtrant la ligne de commande sur `.cli-data`.
 - **Ne jamais lancer `asar extract-file` depuis la racine du projet** : il extrait dans le dossier courant, et `extract-file … package.json` a écrasé le `package.json` du projet (vécu, restauré). Lister avec `asar list`, extraire dans le scratchpad.
-- **Ne pas mettre `productName` au niveau racine de `package.json`** (seulement dans `build`) : Electron en tirerait le nom de l'app, et l'exe irait chercher ses données dans `%APPDATA%\MC Mod Launcher\` au lieu de `mc-mod-launcher\`, perdant instances et téléchargements.
-- **Tester la mise à jour automatique sans publier de fausse release** : compiler en local une version inférieure à la release publiée (`npm version 0.x.99 --no-git-tag-version`, `npm run dist`, puis revenir), l'installer en silence (`Setup.exe /S /currentuser /D=<dossier>`), la lancer : elle doit trouver la release, la télécharger et s'y mettre à jour. L'utilisateur a une installation dans `K:JeuxMC Mod Launcher` : c'est elle qui est mise à jour. Le updater est inactif en dev (`app.isPackaged`).
+- **Ne pas mettre `productName` au niveau racine de `package.json`** (seulement dans `build`) : Electron en tirerait le nom de l'app, et l'exe irait chercher ses données dans `%APPDATA%\boomLauncher\` au lieu de `mc-mod-launcher\`, perdant instances et téléchargements.
+- **Le launcher s'appelle boomLauncher, mais `name` (`mc-mod-launcher`) et `build.appId` (`com.boomeland.mcmodlauncher`) ne changent pas** : le premier fixe le dossier de données, le second l'identité de l'installation Windows (un autre `appId` = une deuxième installation à côté au lieu d'une mise à jour).
+- **Tester la mise à jour automatique sans publier de fausse release** : compiler en local une version inférieure à la release publiée (`npm version 0.x.99 --no-git-tag-version`, `npm run dist`, puis revenir), l'installer en silence (`Setup.exe /S /currentuser /D=<dossier>`), la lancer : elle doit trouver la release, la télécharger et s'y mettre à jour. Pour tester une version **pas encore publiée** : servir `dist/` en HTTP local et remplacer temporairement `resources/app-update.yml` de l'installation par `provider: generic` + `url: http://127.0.0.1:<port>/` (vérifié pour la 0.3.1 : l'installeur réécrit ce fichier avec la config GitHub). L'utilisateur a une installation dans `K:JeuxMC Mod Launcher` : c'est elle qui est mise à jour. Le updater est inactif en dev (`app.isPackaged`).
 - **La version n'est écrite que dans `package.json`** (lue par `core/launch.ts` pour `-Dminecraft.launcher.version`) : monter la version avec `npm version X.Y.Z --no-git-tag-version`, qui met aussi à jour le lock.
 - **`package-lock.json` est généré par npm** : ne pas l'éditer à la main, ne pas le « découper » (sa taille n'est pas un problème de qualité de code).
 - **Fichiers en CRLF + pas de `python` fiable** ici : les remplacements multi-lignes par script échouent silencieusement. Utiliser les outils d'édition, pas un `sed`/one-liner multi-lignes.
@@ -69,7 +70,7 @@ Trois frontières seulement, mais elles comptent :
 
 ## État courant
 
-- **Auth Microsoft** : device code, Xbox Live et XSTS validés contre les vrais serveurs. L'étape finale `login_with_xbox` renvoie 403 tant que Mojang n'a pas approuvé l'app Azure (`aka.ms/AppRegInfo`). Le mode hors-ligne sert en attendant.
+- **Auth Microsoft** : device code, Xbox Live et XSTS validés contre les vrais serveurs. L'étape finale `login_with_xbox` renvoie 403 tant que Mojang n'a pas approuvé l'app Azure (`aka.ms/AppRegInfo`). **Mojang a refusé la première demande (22/09/2026)** : le launcher a été renommé de « MC Mod Launcher » en « boomLauncher » à la suite de ce refus. Le mode hors-ligne sert en attendant.
 - **Testé en lancement réel** : vanilla 1.21.1, Forge 1.20.1 (Java 17), Forge 1.12.2 (Java 8, ancien format de JSON), NeoForge 21.1.251 (MC 1.21.1, Java 21) les modpacks FTB Ultimate Anniversary (Forge 1.16.5) et Fabulously Optimized (Modrinth, Fabric 1.21.1), et un mod Modrinth (JEI) chargé par NeoForge, tous lancés depuis « Jouer » dans l'app.
 - Roadmap et détail du fonctionnement : **README.md** (ne pas dupliquer ici, ça périme).
 

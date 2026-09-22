@@ -15,7 +15,7 @@
   },
   "build": {
     "appId": "com.boomeland.mcmodlauncher",
-    "productName": "MC Mod Launcher",
+    "productName": "boomLauncher",
     "directories": {
       "output": "dist",
       "buildResources": "build"
@@ -40,10 +40,10 @@
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
-      "artifactName": "MC-Mod-Launcher-Setup.${ext}"
+      "artifactName": "boomLauncher-Setup.${ext}"
     },
     "portable": {
-      "artifactName": "MC-Mod-Launcher-Portable.${ext}"
+      "artifactName": "boomLauncher-Portable.${ext}"
     }
   },
   "devDependencies": {

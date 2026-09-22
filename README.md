@@ -1,4 +1,4 @@
-# MC Mod Launcher
+# boomLauncher
 
 Un launcher Minecraft Java fait maison, pour remplacer le launcher officiel. Le but final : lancer du Minecraft **moddé (Forge en priorité)**.
 
@@ -8,8 +8,8 @@ Un launcher Minecraft Java fait maison, pour remplacer le launcher officiel. Le 
 
 | Windows 10 / 11 (64 bits) | |
 |---|---|
-| [**⬇ Installeur** (MC-Mod-Launcher-Setup.exe)](https://github.com/boomeland/MC-mod-launcher/releases/latest/download/MC-Mod-Launcher-Setup.exe) | Installation classique : raccourcis, désinstallation depuis Windows. |
-| [**⬇ Version portable** (MC-Mod-Launcher-Portable.exe)](https://github.com/boomeland/MC-mod-launcher/releases/latest/download/MC-Mod-Launcher-Portable.exe) | Un seul fichier, à lancer sans installation. |
+| [**⬇ Installeur** (boomLauncher-Setup.exe)](https://github.com/boomeland/MC-mod-launcher/releases/latest/download/boomLauncher-Setup.exe) | Installation classique : raccourcis, désinstallation depuis Windows. |
+| [**⬇ Version portable** (boomLauncher-Portable.exe)](https://github.com/boomeland/MC-mod-launcher/releases/latest/download/boomLauncher-Portable.exe) | Un seul fichier, à lancer sans installation. |
 
 Toutes les versions : [page des releases](https://github.com/boomeland/MC-mod-launcher/releases).
 
@@ -140,8 +140,8 @@ Rien n'est mémorisé à part : l'état vient du dossier `mods/` lui-même. Les 
 
 `npm run dist` compile l'app puis la package avec **electron-builder** (config : champ `build` de `package.json`) :
 
-- `dist/MC-Mod-Launcher-Setup.exe` : installeur (choix du dossier, raccourcis, désinstallation) ;
-- `dist/MC-Mod-Launcher-Portable.exe` : se lance sans installation (démarrage un peu plus lent : il se décompresse à chaque lancement).
+- `dist/boomLauncher-Setup.exe` : installeur (choix du dossier, raccourcis, désinstallation) ;
+- `dist/boomLauncher-Portable.exe` : se lance sans installation (démarrage un peu plus lent : il se décompresse à chaque lancement).
 
 L'icône vient de `build/icon.png` (512 px, convertie en `.ico` par electron-builder). Le `client_id` Microsoft de `.env` est intégré au build : ce n'est pas un secret (client public, device code flow). L'app packagée garde ses données dans `%APPDATA%\mc-mod-launcher\`, comme en dev, et retrouve donc les instances et les fichiers déjà téléchargés.
 

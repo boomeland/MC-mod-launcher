@@ -1,6 +1,6 @@
 import { AuthError, explain } from './errors'
 
-export const UA = 'mc-mod-launcher/0.1'
+export const UA = 'boomLauncher/0.1'
 
 export async function postForm<T>(url: string, body: Record<string, string>): Promise<{ ok: boolean; data: T }> {
   const res = await fetch(url, {
