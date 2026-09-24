@@ -9,20 +9,53 @@ import type { ProgressFn } from './types'
 // Modrinth exige un User-Agent qui identifie le projet (sinon il peut limiter ou bloquer les requêtes).
 const UA = 'boomeland/boomLauncher (github.com/boomeland/boomLauncher)'
 
-export async function fetchJson<T>(url: string): Promise<T> {
-  const res = await fetch(url, { headers: { 'User-Agent': UA } })
-  if (!res.ok) throw new Error(`HTTP ${res.status} sur ${url}`)
-  return (await res.json()) as T
+// Sans délai à nous, Node attend 5 min un serveur muet, et downloadFile réessaie 3 fois : « Préparation… » restait
+// figé un quart d'heure, sans erreur ni moyen de relancer. 30 s de silence suffisent à conclure.
+export const TIMEOUT_MS = 30_000
+
+/**
+ * Exécute une requête et l'abandonne après TIMEOUT_MS sans signe de vie du serveur. `alive` relance le délai :
+ * un téléchargement l'appelle à chaque morceau reçu, pour couper un serveur muet et pas un gros fichier sur une
+ * connexion lente. Sans appel à `alive` (petites réponses JSON), c'est un délai total.
+ */
+export async function withTimeout<T>(url: string, run: (signal: AbortSignal, alive: () => void) => Promise<T>): Promise<T> {
+  const ctrl = new AbortController()
+  let timer: ReturnType<typeof setTimeout> | undefined
+  const alive = () => {
+    clearTimeout(timer)
+    timer = setTimeout(() => ctrl.abort(), TIMEOUT_MS)
+  }
+  alive()
+  try {
+    return await run(ctrl.signal, alive)
+  } catch (e) {
+    // L'erreur d'annulation de Node est en anglais et ne nomme pas le serveur.
+    if (ctrl.signal.aborted) throw new Error(`pas de réponse de ${new URL(url).host} depuis ${TIMEOUT_MS / 1000} s`)
+    throw e
+  } finally {
+    clearTimeout(timer)
+  }
 }
 
-export async function postJson<T>(url: string, body: unknown): Promise<T> {
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'User-Agent': UA, 'Content-Type': 'application/json' },
-    body: JSON.stringify(body)
+export function fetchJson<T>(url: string): Promise<T> {
+  return withTimeout(url, async (signal) => {
+    const res = await fetch(url, { headers: { 'User-Agent': UA }, signal })
+    if (!res.ok) throw new Error(`HTTP ${res.status} sur ${url}`)
+    return (await res.json()) as T
   })
-  if (!res.ok) throw new Error(`HTTP ${res.status} sur ${url}`)
-  return (await res.json()) as T
+}
+
+export function postJson<T>(url: string, body: unknown): Promise<T> {
+  return withTimeout(url, async (signal) => {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'User-Agent': UA, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      signal
+    })
+    if (!res.ok) throw new Error(`HTTP ${res.status} sur ${url}`)
+    return (await res.json()) as T
+  })
 }
 
 export function sha1File(path: string): Promise<string> {
@@ -57,9 +90,20 @@ export async function downloadFile(item: DownloadItem, retries = 3): Promise<voi
   let lastErr: unknown
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
-      const res = await fetch(item.url, { headers: { 'User-Agent': UA } })
-      if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`)
-      await pipeline(Readable.fromWeb(res.body as never), createWriteStream(tmp))
+      await withTimeout(item.url, async (signal, alive) => {
+        const res = await fetch(item.url, { headers: { 'User-Agent': UA }, signal })
+        if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`)
+        await pipeline(
+          Readable.fromWeb(res.body as never),
+          async function* (chunks: AsyncIterable<Buffer>) {
+            for await (const chunk of chunks) {
+              alive()
+              yield chunk
+            }
+          },
+          createWriteStream(tmp)
+        )
+      })
       if (item.sha1 && (await sha1File(tmp)) !== item.sha1) throw new Error('SHA1 invalide')
       await rename(tmp, item.dest)
       return
