@@ -9,7 +9,9 @@ import { diagnoseCrash, explainCrash, findCrashReport } from '../src/core/crash'
 // - fabric-console : Sodium Extra sans Sodium (Fabric 0.19.5, MC 1.21.1), fenêtre d'erreur, pas de rapport ;
 // - neoforge-report : REI sans Architectury ni Cloth Config (NeoForge 21.1.248), début de crash-reports/crash-…-fml.txt ;
 // - oom-console : vanilla 1.21.1 avec -Xmx200M, écran « Out of memory », pas de rapport ;
-// - hs_err.log : vanilla avec -Xmx64M -XX:+CrashOnOutOfMemoryError, début du hs_err_pid*.log de Java.
+// - hs_err.txt : vanilla avec -Xmx64M -XX:+CrashOnOutOfMemoryError, début du hs_err_pid*.log de Java
+//   (en .txt : le .gitignore exclut les *.log).
+// Git les extrait en CRLF sous Windows (core.autocrlf) : les règles doivent tenir avec les deux fins de ligne.
 const FIXTURES = join(import.meta.dirname, 'fixtures', 'crash')
 const fixture = (name: string) => readFile(join(FIXTURES, name), 'utf8')
 
@@ -30,7 +32,7 @@ describe('cause d\'un crash', () => {
   })
 
   it('reconnaît un manque de mémoire, dans la console comme dans un hs_err', async () => {
-    for (const f of ['oom-console.txt', 'hs_err.log']) assert.match(explainCrash(await fixture(f)) ?? '', /manqué de mémoire/)
+    for (const f of ['oom-console.txt', 'hs_err.txt']) assert.match(explainCrash(await fixture(f)) ?? '', /manqué de mémoire/)
   })
 
   it('ne voit rien dans une console normale', async () => {
@@ -58,7 +60,7 @@ describe('rapport de crash', () => {
 
   it('trouve le hs_err écrit par Java à la racine du dossier de jeu', async () => {
     const hs = join(game, 'hs_err_pid6528.log')
-    await writeFile(hs, await fixture('hs_err.log')) // pas copyFile : sous Windows, la copie garde la date de l'original
+    await writeFile(hs, await fixture('hs_err.txt')) // pas copyFile : sous Windows, la copie garde la date de l'original
     assert.deepEqual(await diagnoseCrash(game, start, []), {
       cause: "Minecraft a manqué de mémoire : augmente la RAM de l'instance dans l'onglet Réglages.",
       report: hs
@@ -67,7 +69,7 @@ describe('rapport de crash', () => {
 
   it('préfère crash-reports/ et retombe sur la description quand la cause est inconnue', async () => {
     const report = join(game, 'crash-reports', 'crash-nouveau.txt')
-    const text = (await fixture('neoforge-report.txt')).replace(/\tFailure message: .*\n/g, '')
+    const text = (await fixture('neoforge-report.txt')).replace(/\tFailure message: .*\r?\n/g, '')
     await writeFile(report, text)
     assert.deepEqual(await diagnoseCrash(game, start, []), {
       cause: 'Le jeu a planté : Mod loading failures have occurred; consult the issue messages for more details',
