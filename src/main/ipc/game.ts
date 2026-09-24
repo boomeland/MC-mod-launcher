@@ -90,6 +90,7 @@ export function registerGameIpc() {
   ipcMain.handle('game:stop', async (e) => {
     if (!game) return
     const { response } = await dialog.showMessageBox(BrowserWindow.fromWebContents(e.sender)!, {
+      title: 'boomLauncher', // voir instances:delete
       type: 'warning',
       buttons: ['Annuler', "Forcer l'arrêt"],
       defaultId: 0,
