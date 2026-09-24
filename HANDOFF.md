@@ -8,7 +8,7 @@ Ne pas y chercher le fonctionnement du launcher (→ `README.md`) ni les règles
 
 ## 1. État git
 
-- `dev` = `origin/dev` + le travail **non commité** du §2. Avant lui, **`dev` était entièrement mergée dans `main`** (PR #7 et #8).
+- Le travail du §2 est commité sur `dev`, pas encore dans `main` ni dans une release. Avant lui, **`dev` était entièrement mergée dans `main`** (PR #7 et #8).
 - Dernière release publiée : **`v0.3.2`** (22/09). L'installation de l'utilisateur (`K:JeuxMC Mod Launcher`) se met à jour seule depuis les releases GitHub.
 - Dépôt renommé **`boomeland/boomLauncher`** : GitHub redirige (301) l'ancien nom, les installations antérieures trouvent donc les nouvelles versions.
 
@@ -20,7 +20,7 @@ Ne pas y chercher le fonctionnement du launcher (→ `README.md`) ni les règles
 | `v0.3.1` | Renommage en **boomLauncher** (après le refus de Mojang) |
 | `v0.3.2` | Hors-ligne réservé aux possesseurs du jeu, messages d'erreur lisibles |
 
-## 2. Travail du 24/09 (**non commité**, sur `dev`)
+## 2. Travail du 24/09 (commité sur `dev`, pas encore publié)
 
 Les deux premières améliorations de la liste proposée à l'utilisateur (la suite est au §6) :
 
