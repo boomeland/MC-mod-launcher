@@ -1,3 +1,4 @@
+import type { CrashDiagnosis } from '../core/crash'
 import type { Instance, InstancePatch, NewInstance } from '../core/instances'
 import type { LoaderVersions } from '../core/loaders'
 import type { PackDetail, PackSourceId, PackSummary } from '../core/modpacks'
@@ -64,7 +65,10 @@ export interface LauncherApi {
   stop(): Promise<void>
   onProgress(cb: (p: Progress) => void): void
   onLog(cb: (line: string) => void): void
-  onExit(cb: (code: number | null) => void): void
+  /** code null : process tué (bouton Arrêter). crash : cause et rapport trouvés à la fin de la partie, sinon null. */
+  onExit(cb: (exit: { code: number | null; crash: CrashDiagnosis | null }) => void): void
+  /** Ouvre le rapport de crash de la dernière partie (le chemin reste côté main). */
+  openCrashReport(): Promise<void>
 
   /** Pseudo du compte Microsoft connecté, ou null. */
   getAccount(): Promise<string | null>

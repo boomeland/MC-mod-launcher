@@ -1,7 +1,8 @@
-import { BrowserWindow, dialog, ipcMain } from 'electron'
+import { BrowserWindow, dialog, ipcMain, shell } from 'electron'
 import type { ChildProcess } from 'node:child_process'
 import { mkdir } from 'node:fs/promises'
 import { offlineAccount } from '../../core/auth'
+import { diagnoseCrash } from '../../core/crash'
 import { getInstance, instanceGameDir, splitJvmArgs } from '../../core/instances'
 import { installVersion } from '../../core/install'
 import { buildLaunchCommand, spawnGame } from '../../core/launch'
@@ -16,6 +17,12 @@ import { INSTANCES_DIR, MSA_CLIENT_ID, paths } from '../config'
 let running = false
 /** Process du jeu en cours ; `running` couvre aussi la préparation (téléchargements), où il n'existe pas encore. */
 let game: ChildProcess | null = null
+/** Rapport de crash de la dernière partie. Gardé ici : le renderer demande à l'ouvrir sans jamais fournir de chemin. */
+let crashReport: string | undefined
+
+// Fin de la console, pour le diagnostic : les causes (solution Fabric, OutOfMemoryError) sont dans les dernières
+// lignes, parfois sans aucun rapport écrit. 500 lignes couvrent la trace et l'arrêt qui suit.
+const TAIL_LINES = 500
 
 /** Compte Microsoft (token rafraîchi à chaque partie : il dure ~24 h) ou compte hors-ligne. */
 async function resolveAccount(offlineName: string): Promise<Account> {
@@ -61,6 +68,7 @@ export function registerGameIpc() {
             )
       const { resolved, javaPath } = await installVersion(paths, versionId, onProgress)
 
+      const startedAt = Date.now()
       const proc = spawnGame(
         buildLaunchCommand(paths, resolved, {
           versionId,
@@ -72,11 +80,20 @@ export function registerGameIpc() {
         })
       )
       game = proc
-      forwardLogs(proc, (line) => send('game:log', line))
-      proc.on('exit', (code) => {
+      const tail: string[] = []
+      forwardLogs(proc, (line) => {
+        send('game:log', line)
+        tail.push(line)
+        if (tail.length > TAIL_LINES) tail.shift()
+      })
+      // 'close' et pas 'exit' : 'exit' peut arriver avant les dernières lignes de la console, celles qui portent la cause.
+      proc.on('close', async (code) => {
+        // Un échec du diagnostic ne doit pas priver le renderer de game:exit : le bouton resterait sur « Arrêter ».
+        const crash = await diagnoseCrash(gameDir, startedAt, tail).catch(() => null)
+        crashReport = crash?.report
         running = false
         game = null
-        send('game:exit', code)
+        send('game:exit', { code, crash })
       })
     } catch (err) {
       running = false
@@ -101,5 +118,11 @@ export function registerGameIpc() {
     })
     // Le jeu a pu se fermer pendant que la boîte était ouverte.
     if (response === 1) game?.kill()
+  })
+
+  ipcMain.handle('game:open-crash-report', async () => {
+    if (!crashReport) return
+    const error = await shell.openPath(crashReport)
+    if (error) throw new Error(error)
   })
 }

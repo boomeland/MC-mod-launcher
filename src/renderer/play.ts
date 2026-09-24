@@ -7,6 +7,9 @@ const playBtn = $<HTMLButtonElement>('play')
 const playLabel = $('play-label')
 const playIcon = playBtn.querySelector('path')!
 const usernameIn = $<HTMLInputElement>('username')
+const crashBox = $('crash')
+const crashCause = $('crash-cause')
+const crashOpen = $<HTMLButtonElement>('crash-open')
 let state: 'ready' | 'preparing' | 'running' = 'ready'
 
 /** Le bouton porte l'état de la partie : prêt, en préparation (téléchargements), en jeu (il sert alors à l'arrêter). */
@@ -25,11 +28,19 @@ export function initPlay() {
     setProgress(p.total ? p.done / p.total : 0)
   })
   window.launcher.onLog(appendLog)
-  window.launcher.onExit((code) => {
+  window.launcher.onExit(({ code, crash }) => {
     // code null : process tué (bouton Arrêter), il n'a pas de code de sortie.
     setStatus(code === 0 ? 'Jeu fermé' : code === null ? 'Jeu arrêté' : `Jeu fermé (code ${code})`)
     setPlayState('ready')
+    if (!crash) return
+    crashCause.textContent = crash.cause
+    crashOpen.hidden = !crash.report
+    crashBox.hidden = false
+    showTab('console')
   })
+  crashOpen.addEventListener('click', () =>
+    window.launcher.openCrashReport().catch((e) => setStatus(`Erreur : ${errorText(e)}`))
+  )
 
   playBtn.addEventListener('click', async () => {
     if (state === 'running') return void window.launcher.stop()
@@ -38,6 +49,7 @@ export function initPlay() {
     setPlayState('preparing')
     showTab('console')
     clearLog()
+    crashBox.hidden = true
     try {
       await window.launcher.play({ instanceId: instance.id, offlineName: usernameIn.value.trim() || 'Player' })
       setPlayState('running')

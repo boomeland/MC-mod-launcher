@@ -1,0 +1,16 @@
+[17:45:43] [main/INFO] Loading Minecraft 1.21.1 with Fabric Loader 0.19.5
+[17:45:43] [main/WARN] Mod resolution failed
+[17:45:43] [main/INFO] Immediate reason: [HARD_DEP_NO_CANDIDATE sodium-extra 0.9.4+mc1.21.1 {depends sodium @ [>=0.8.13+mc1.21.1]}, ROOT_FORCELOAD_SINGLE sodium-extra 0.9.4+mc1.21.1]
+[17:45:43] [main/INFO] Reason: [HARD_DEP sodium-extra 0.9.4+mc1.21.1 {depends sodium @ [>=0.8.13+mc1.21.1]}]
+[17:45:43] [main/INFO] Fix: add [add:sodium 0.8.13+mc1.21.1 ([[0.8.13+mc1.21.1,∞)])], remove [], replace []
+[17:45:43] [main/ERROR] Incompatible mods found!
+net.fabricmc.loader.impl.FormattedException: Some of your mods are incompatible with the game or each other!
+A potential solution has been determined, this may resolve your problem:
+	 - Install sodium, version 0.8.13+mc1.21.1 or later.
+More details:
+	 - Mod 'Sodium Extra' (sodium-extra) 0.9.4+mc1.21.1 requires version 0.8.13+mc1.21.1 or later of sodium, which is missing!
+	at net.fabricmc.loader.impl.FormattedException.ofLocalized(FormattedException.java:51)
+	at net.fabricmc.loader.impl.FabricLoaderImpl.load(FabricLoaderImpl.java:202)
+	at net.fabricmc.loader.impl.launch.knot.Knot.init(Knot.java:142)
+	at net.fabricmc.loader.impl.launch.knot.Knot.launch(Knot.java:66)
+	at net.fabricmc.loader.impl.launch.knot.KnotClient.main(KnotClient.java:23)

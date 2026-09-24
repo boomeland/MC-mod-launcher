@@ -1,0 +1,11 @@
+[17:46:19] [Worker-Main-8/INFO] Found unifont_all_no_pua-15.1.05.hex, loading
+[17:46:19] [Worker-Main-9/INFO] Found unifont_jp_patch-15.1.05.hex, loading
+[17:46:23] [Worker-Main-2/WARN] Worker-Main-2 died
+java.lang.OutOfMemoryError: Java heap space
+[17:46:23] [Worker-Main-2/ERROR] Caught exception in thread Thread[#74,Worker-Main-2,5,main]
+java.lang.OutOfMemoryError: Java heap space
+[17:46:23] [Render thread/FATAL] Out of memory
+java.lang.OutOfMemoryError: Java heap space
+	at fgo.c(SourceFile:1347)
+	at fgo.f(SourceFile:882)
+	at net.minecraft.client.main.Main.main(SourceFile:256)

@@ -1,0 +1,31 @@
+---- Minecraft Crash Report ----
+// I bet Cylons wouldn't have this problem.
+
+Time: 2026-09-24 17:42:28
+Description: Mod loading failures have occurred; consult the issue messages for more details
+
+net.neoforged.neoforge.logging.CrashReportExtender$ModLoadingCrashException: Mod loading has failed
+
+
+A detailed walkthrough of the error, its code path and all known details is as follows:
+---------------------------------------------------------------------------------------
+
+-- Mod loading issue for: roughlyenoughitems --
+Details:
+	Mod file: C:/instances/test/minecraft/mods/RoughlyEnoughItems-16.0.799-neoforge.jar
+	Failure message: Mod roughlyenoughitems requires architectury 8 or above
+		Currently, architectury is not installed
+		
+	Mod version: 16.0.799
+	Mod issues URL: https://github.com/shedaniel/RoughlyEnoughItems/issues
+	Exception message: <No associated exception found>
+
+-- Mod loading issue for: roughlyenoughitems --
+Details:
+	Mod file: C:/instances/test/minecraft/mods/RoughlyEnoughItems-16.0.799-neoforge.jar
+	Failure message: Mod roughlyenoughitems requires cloth_config 10.0 or above
+		Currently, cloth_config is not installed
+		
+	Mod version: 16.0.799
+	Mod issues URL: https://github.com/shedaniel/RoughlyEnoughItems/issues
+	Exception message: <No associated exception found>

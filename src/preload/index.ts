@@ -29,7 +29,8 @@ const api: LauncherApi = {
   stop: () => ipcRenderer.invoke('game:stop'),
   onProgress: (cb) => void ipcRenderer.on('game:progress', (_e, p) => cb(p)),
   onLog: (cb) => void ipcRenderer.on('game:log', (_e, line) => cb(line)),
-  onExit: (cb) => void ipcRenderer.on('game:exit', (_e, code) => cb(code)),
+  onExit: (cb) => void ipcRenderer.on('game:exit', (_e, exit) => cb(exit)),
+  openCrashReport: () => ipcRenderer.invoke('game:open-crash-report'),
 
   getAccount: () => ipcRenderer.invoke('auth:account'),
   offlineAllowed: () => ipcRenderer.invoke('auth:offline-allowed'),
