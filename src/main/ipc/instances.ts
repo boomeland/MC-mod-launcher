@@ -25,6 +25,8 @@ export function registerInstancesIpc() {
   ipcMain.handle('instances:delete', async (e, id: string) => {
     const instance = await getInstance(INSTANCES_DIR, id) // valide l'id
     const { response } = await dialog.showMessageBox(BrowserWindow.fromWebContents(e.sender)!, {
+      // Sans titre, Windows affiche app.getName() : le nom npm « mc-mod-launcher », gardé pour le dossier de données.
+      title: 'boomLauncher',
       type: 'warning',
       buttons: ['Annuler', 'Supprimer'],
       defaultId: 0,

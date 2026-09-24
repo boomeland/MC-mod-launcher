@@ -149,6 +149,8 @@ button:disabled { cursor: default; opacity: 0.45; }
 .btn-play svg { fill: currentColor; stroke: none; width: 20px; height: 20px; }
 .btn-play:hover:not(:disabled) { filter: brightness(1.08); transform: translateY(-1px); }
 .btn-play:disabled { opacity: 1; background: var(--surface-3); color: var(--muted); box-shadow: none; }
+/* En jeu : même ton discret que .btn-danger, tuer le jeu ne doit pas avoir l'air d'une action principale. */
+.btn-play.stop { background: rgba(239, 93, 93, 0.12); color: var(--danger); border: 1px solid rgba(239, 93, 93, 0.3); box-shadow: none; }
 
 .chips { display: flex; gap: 6px; flex-wrap: wrap; }
 .chip { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; background: rgba(14, 16, 20, 0.6); border: 1px solid rgba(255, 255, 255, 0.08); color: #cfd5df; }

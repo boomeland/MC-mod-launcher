@@ -1,4 +1,5 @@
 // Token Microsoft → Xbox Live → XSTS → Minecraft Services → profil.
+import { withTimeout } from '../download'
 import type { Account } from '../types'
 import { AuthError } from './errors'
 import { postJson, UA } from './http'
@@ -21,11 +22,12 @@ export async function minecraftLogin(msAccessToken: string): Promise<Account> {
     identityToken: `XBL3.0 x=${xsts.DisplayClaims.xui[0].uhs};${xsts.Token}`
   })
 
-  const res = await fetch('https://api.minecraftservices.com/minecraft/profile', {
-    headers: { Authorization: `Bearer ${mc.access_token}`, 'User-Agent': UA }
+  const profileUrl = 'https://api.minecraftservices.com/minecraft/profile'
+  const profile = await withTimeout(profileUrl, async (signal) => {
+    const res = await fetch(profileUrl, { headers: { Authorization: `Bearer ${mc.access_token}`, 'User-Agent': UA }, signal })
+    if (res.status === 404) throw new AuthError('Ce compte Microsoft ne possède pas Minecraft Java Edition.')
+    if (!res.ok) throw new AuthError(`Profil Minecraft indisponible (${res.status})`)
+    return (await res.json()) as { id: string; name: string }
   })
-  if (res.status === 404) throw new AuthError('Ce compte Microsoft ne possède pas Minecraft Java Edition.')
-  if (!res.ok) throw new AuthError(`Profil Minecraft indisponible (${res.status})`)
-  const profile = (await res.json()) as { id: string; name: string }
   return { name: profile.name, uuid: profile.id, accessToken: mc.access_token, userType: 'msa' }
 }

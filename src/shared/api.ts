@@ -60,6 +60,8 @@ export interface LauncherApi {
   openReleasePage(): Promise<void>
 
   play(opts: PlayOptions): Promise<void>
+  /** Demande confirmation (boîte native) puis tue le process du jeu ; la fin arrive par onExit. */
+  stop(): Promise<void>
   onProgress(cb: (p: Progress) => void): void
   onLog(cb: (line: string) => void): void
   onExit(cb: (code: number | null) => void): void

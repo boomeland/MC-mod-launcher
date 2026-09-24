@@ -281,7 +281,9 @@ Les données sont dans le dossier `userData` d'Electron (`%APPDATA%/mc-mod-launc
 - [x] **Fabric** : installation testée (`--dry`, 1.20.1)
 - [x] **Modpacks FTB** : 62 packs pris en charge sur 94 ; le loader des 62 est résolu sans échec. FTB Ultimate Anniversary (1.16.5, Forge) installé et lancé à 2 Go, via le CLI et via l'interface
 - [x] Bouton « Jouer » depuis l'interface Electron (jeu lancé, logs affichés, fin de partie détectée)
-- [x] Tests automatisés (40 tests) : instances (dont changement de version et arguments JVM), mods locaux (noms reçus par IPC), versions NeoForge, fichiers FTB et `.mrpack` (chemins, hôtes, zip slip), décodage des logs
+- [x] Bouton « Arrêter » pendant la partie, pour un jeu figé (confirmation native, process tué par son PID). Vérifié dans l'app : annuler laisse le jeu tourner, forcer l'arrêt le ferme et remet « Jouer »
+- [x] Délai réseau : une requête est abandonnée après 30 s sans réponse du serveur (un téléchargement lent mais actif n'est pas coupé), au lieu de figer « Préparation… »
+- [x] Tests automatisés (42 tests) : instances (dont changement de version et arguments JVM), mods locaux (noms reçus par IPC), versions NeoForge, fichiers FTB et `.mrpack` (chemins, hôtes, zip slip), décodage des logs, délai des téléchargements
 - [x] **Gestion des mods** (onglet Mods) : liste avec noms et icônes Modrinth, activer / désactiver, supprimer, ajouter des `.jar` (bouton et glisser-déposer), recherche Modrinth avec dépendances, mises à jour. Vérifié en jeu : JEI installé depuis l'interface et chargé par NeoForge 1.21.1
 - [x] **Modpacks Modrinth** : recherche, installation, lancement. Vérifié en jeu : Fabulously Optimized 6.5.0 (Fabric 1.21.1, 151 mods chargés) installé et lancé depuis l'interface
 - [x] **Mise à jour automatique** du launcher installé (electron-updater + releases GitHub). Vérifiée de bout en bout : une 0.2.99 installée a trouvé la release 0.3.0, l'a téléchargée, installée en silence et s'est relancée en 0.3.0
