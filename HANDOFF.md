@@ -8,8 +8,8 @@ Ne pas y chercher le fonctionnement du launcher (→ `README.md`) ni les règles
 
 ## 1. État git
 
-- Le travail du §2 est commité sur `dev`, pas encore dans `main` ni dans une release. Avant lui, **`dev` était entièrement mergée dans `main`** (PR #7 et #8).
-- Dernière release publiée : **`v0.3.2`** (22/09). L'installation de l'utilisateur (`K:JeuxMC Mod Launcher`) se met à jour seule depuis les releases GitHub.
+- Le travail du §2 est poussé sur `dev` et publié en **`v0.3.3`** ; il n'est pas encore dans `main` (**PR `dev` → `main` à faire** par l'utilisateur). Avant lui, `dev` était entièrement mergée dans `main` (PR #7 et #8).
+- Dernière release publiée : **`v0.3.3`** (24/09). L'installation de l'utilisateur (`K:JeuxMC Mod Launcher`) se met à jour seule depuis les releases GitHub.
 - Dépôt renommé **`boomeland/boomLauncher`** : GitHub redirige (301) l'ancien nom, les installations antérieures trouvent donc les nouvelles versions.
 
 | Release | Contenu |
@@ -19,8 +19,9 @@ Ne pas y chercher le fonctionnement du launcher (→ `README.md`) ni les règles
 | `v0.3.0` | Mise à jour automatique (electron-updater) |
 | `v0.3.1` | Renommage en **boomLauncher** (après le refus de Mojang) |
 | `v0.3.2` | Hors-ligne réservé aux possesseurs du jeu, messages d'erreur lisibles |
+| `v0.3.3` | Bouton « Arrêter », délai réseau de 30 s, titre « boomLauncher » des boîtes natives |
 
-## 2. Travail du 24/09 (commité sur `dev`, pas encore publié)
+## 2. Travail du 24/09 (publié en v0.3.3)
 
 Les deux premières améliorations de la liste proposée à l'utilisateur (la suite est au §6) :
 
@@ -85,8 +86,6 @@ Les deux premières améliorations de la liste proposée à l'utilisateur (la su
 3. **Mise à jour d'un modpack installé** (sans perdre mondes et réglages).
 4. **Dupliquer une instance / sauvegarder ses mondes** (avant de changer de version : une rétrogradation peut corrompre un monde).
 5. **CurseForge** (clé API Overwolf).
-
-Détail relevé en testant : le titre des boîtes natives est « mc-mod-launcher » (nom npm) et non « boomLauncher » ; ajouter `title` à `showMessageBox`, ou fixer le nom via `app.setName` (à vérifier : ne doit pas changer le dossier de données).
 
 ## 7. Questions en attente pour l'utilisateur
 
