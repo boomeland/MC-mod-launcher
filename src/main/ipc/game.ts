@@ -1,4 +1,4 @@
-import { ipcMain } from 'electron'
+import { BrowserWindow, dialog, ipcMain } from 'electron'
 import type { ChildProcess } from 'node:child_process'
 import { mkdir } from 'node:fs/promises'
 import { offlineAccount } from '../../core/auth'
@@ -14,6 +14,8 @@ import { loadAccount, offlineAllowed, saveAccount } from '../accounts'
 import { INSTANCES_DIR, MSA_CLIENT_ID, paths } from '../config'
 
 let running = false
+/** Process du jeu en cours ; `running` couvre aussi la préparation (téléchargements), où il n'existe pas encore. */
+let game: ChildProcess | null = null
 
 /** Compte Microsoft (token rafraîchi à chaque partie : il dure ~24 h) ou compte hors-ligne. */
 async function resolveAccount(offlineName: string): Promise<Account> {
@@ -69,14 +71,34 @@ export function registerGameIpc() {
           extraJvmArgs: splitJvmArgs(instance.jvmArgs)
         })
       )
+      game = proc
       forwardLogs(proc, (line) => send('game:log', line))
       proc.on('exit', (code) => {
         running = false
+        game = null
         send('game:exit', code)
       })
     } catch (err) {
       running = false
       throw err
     }
+  })
+
+  // Pour un jeu figé (fréquent au chargement d'un gros modpack). Confirmation native côté main pour la même raison
+  // que instances:delete (un confirm() du renderer coupe le clavier), et parce que tuer le process perd tout ce qui
+  // n'est pas sauvegardé. kill() vise le PID du jeu lancé ici, jamais un java.exe par son nom.
+  ipcMain.handle('game:stop', async (e) => {
+    if (!game) return
+    const { response } = await dialog.showMessageBox(BrowserWindow.fromWebContents(e.sender)!, {
+      type: 'warning',
+      buttons: ['Annuler', "Forcer l'arrêt"],
+      defaultId: 0,
+      cancelId: 0,
+      noLink: true,
+      message: "Forcer l'arrêt de Minecraft ?",
+      detail: "À réserver à un jeu qui ne répond plus : ce qui n'a pas été sauvegardé sera perdu. Pour quitter normalement, passe par le menu du jeu."
+    })
+    // Le jeu a pu se fermer pendant que la boîte était ouverte.
+    if (response === 1) game?.kill()
   })
 }

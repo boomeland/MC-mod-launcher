@@ -5,13 +5,18 @@ import { appendLog, clearLog, errorText, setProgress, setStatus } from './status
 
 const playBtn = $<HTMLButtonElement>('play')
 const playLabel = $('play-label')
+const playIcon = playBtn.querySelector('path')!
 const usernameIn = $<HTMLInputElement>('username')
+let state: 'ready' | 'preparing' | 'running' = 'ready'
 
-/** Le bouton porte l'état de la partie : prêt, en préparation (téléchargements), en jeu. */
-function setPlayState(state: 'ready' | 'preparing' | 'running') {
-  playBtn.disabled = state !== 'ready'
-  playLabel.textContent = { ready: 'Jouer', preparing: 'Préparation…', running: 'En jeu' }[state]
-  setBusy(state !== 'ready')
+/** Le bouton porte l'état de la partie : prêt, en préparation (téléchargements), en jeu (il sert alors à l'arrêter). */
+function setPlayState(s: typeof state) {
+  state = s
+  playBtn.disabled = s === 'preparing'
+  playBtn.classList.toggle('stop', s === 'running')
+  playLabel.textContent = { ready: 'Jouer', preparing: 'Préparation…', running: 'Arrêter' }[s]
+  playIcon.setAttribute('d', s === 'running' ? 'M6 6h12v12H6z' : 'M8 5v14l11-7z')
+  setBusy(s !== 'ready')
 }
 
 export function initPlay() {
@@ -21,11 +26,13 @@ export function initPlay() {
   })
   window.launcher.onLog(appendLog)
   window.launcher.onExit((code) => {
-    setStatus(code === 0 ? 'Jeu fermé' : `Jeu fermé (code ${code})`)
+    // code null : process tué (bouton Arrêter), il n'a pas de code de sortie.
+    setStatus(code === 0 ? 'Jeu fermé' : code === null ? 'Jeu arrêté' : `Jeu fermé (code ${code})`)
     setPlayState('ready')
   })
 
   playBtn.addEventListener('click', async () => {
+    if (state === 'running') return void window.launcher.stop()
     const instance = getSelectedInstance()
     if (!instance) return
     setPlayState('preparing')

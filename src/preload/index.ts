@@ -26,6 +26,7 @@ const api: LauncherApi = {
   installUpdate: () => ipcRenderer.invoke('update:install'),
   openReleasePage: () => ipcRenderer.invoke('update:open-page'),
   play: (opts) => ipcRenderer.invoke('game:play', opts),
+  stop: () => ipcRenderer.invoke('game:stop'),
   onProgress: (cb) => void ipcRenderer.on('game:progress', (_e, p) => cb(p)),
   onLog: (cb) => void ipcRenderer.on('game:log', (_e, line) => cb(line)),
   onExit: (cb) => void ipcRenderer.on('game:exit', (_e, code) => cb(code)),
