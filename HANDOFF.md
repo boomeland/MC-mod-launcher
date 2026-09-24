@@ -8,7 +8,7 @@ Ne pas y chercher le fonctionnement du launcher (→ `README.md`) ni les règles
 
 ## 1. État git
 
-- Le travail du §2 est poussé sur `dev` et publié en **`v0.3.3`** ; il n'est pas encore dans `main` (**PR `dev` → `main` à faire** par l'utilisateur). Avant lui, `dev` était entièrement mergée dans `main` (PR #7 et #8).
+- La v0.3.3 (§2) est poussée sur `dev` et publiée, mais pas encore dans `main` (**PR `dev` → `main` à faire** par l'utilisateur). Le diagnostic de crash (§2) est **non commité**.
 - Dernière release publiée : **`v0.3.3`** (24/09). L'installation de l'utilisateur (`K:JeuxMC Mod Launcher`) se met à jour seule depuis les releases GitHub.
 - Dépôt renommé **`boomeland/boomLauncher`** : GitHub redirige (301) l'ancien nom, les installations antérieures trouvent donc les nouvelles versions.
 
@@ -21,9 +21,26 @@ Ne pas y chercher le fonctionnement du launcher (→ `README.md`) ni les règles
 | `v0.3.2` | Hors-ligne réservé aux possesseurs du jeu, messages d'erreur lisibles |
 | `v0.3.3` | Bouton « Arrêter », délai réseau de 30 s, titre « boomLauncher » des boîtes natives |
 
-## 2. Travail du 24/09 (publié en v0.3.3)
+## 2. Travail du 24/09
 
-Les deux premières améliorations de la liste proposée à l'utilisateur (la suite est au §6) :
+Les trois premières améliorations de la liste proposée à l'utilisateur (la suite est au §6).
+
+### Diagnostic de crash (**non commité**)
+
+- `core/crash.ts` (`diagnoseCrash`, `findCrashReport`, `explainCrash`) ; `main/ipc/game.ts` garde les 500 dernières lignes de la console, diagnostique sur `'close'` (pas `'exit'`, qui peut précéder les dernières lignes) et envoie `game:exit` = `{ code, crash }`. IPC `game:open-crash-report` sans argument (chemin gardé dans le main). Encadré rouge au-dessus de la console.
+- **Crashs réels provoqués au labo** (script jetable dans le scratchpad, sur le dossier partagé) — ils ont changé le plan :
+  - vanilla `-Xmx64M` : code 1, **aucun rapport**, cause seulement dans la console ; `-Xmx200M` : écran « Out of memory », **le jeu reste ouvert** ;
+  - Fabric + Sodium Extra sans Sodium : fenêtre d'erreur Fabric, pas de rapport, solution calculée dans la console ; fermer la fenêtre → code 1 ;
+  - NeoForge 21.1.248 + REI sans Architectury / Cloth Config : écran d'erreur (reste ouvert) + `crash-reports/crash-…-fml.txt` avec des lignes `Failure message:` ;
+  - `-XX:+CrashOnOutOfMemoryError` : `hs_err_pid*.log` dans le dossier de jeu.
+  - D'où : diagnostic à **chaque** fin de partie, quel que soit le code ; seules ces causes-là sont reconnues (`UnsupportedClassVersionError` et crash de pilote écartés faute de cas réel).
+- Textes réels anonymisés dans `tests/fixtures/crash/`, 8 tests dans `tests/crash.test.mts`.
+- Vérifié dans l'app (profil isolé) : NeoForge arrêté depuis l'écran d'erreur → cause + « Ouvrir le rapport » (ouvre le `.txt` dans l'éditeur par défaut) ; Fabric fenêtre fermée → solution Fabric, bouton masqué ; vanilla fermé normalement → aucun encadré.
+  - Piège de test : l'éditeur `.txt` de l'utilisateur est **Notepad++**, pas le Bloc-notes. Ne pas fermer l'éditeur ouvert par le test sans avoir vérifié qu'il ne tournait pas déjà.
+- Non vérifié : le format `Failure message` de **Forge** (même regex, format supposé identique à NeoForge) ; un crash en pleine partie avec rapport vanilla (repli « Description », testé seulement en unitaire).
+- Santé : typecheck OK, **50/50**, build OK.
+
+### Publié en v0.3.3
 
 - **Bouton « Arrêter »** : en jeu, le bouton Jouer devient « Arrêter » (rouge discret). IPC `game:stop` → boîte native de confirmation dans le main (même raison que `instances:delete`) → `kill()` du process gardé par `main/ipc/game.ts`. Barre d'état : « Jeu arrêté » (code de sortie `null`).
   - Vérifié dans l'app compilée (profil isolé, vanilla 1.21.1 à 2 Go), boîte pilotée par UI Automation : « Annuler » laisse le jeu tourner ; « Forcer l'arrêt » tue le PID, plus aucun `javaw` du profil, bouton revenu à « Jouer ».
@@ -81,11 +98,12 @@ Les deux premières améliorations de la liste proposée à l'utilisateur (la su
 
 ## 6. Prochaines étapes proposées (dans l'ordre)
 
-1. **Diagnostic de crash** : aujourd'hui seulement « Jeu fermé (code 1) ». Repérer le nouveau fichier de `crash-reports/`, proposer « Voir le rapport », reconnaître les causes fréquentes (manque de mémoire → augmenter la RAM, mod manquant).
-2. **Jouer sans Internet** : chaque lancement exige le réseau même quand tout est installé (`ensureJava` relit l'index Java de Mojang, le compte Microsoft rafraîchit son token). Garder l'index sur disque ; sans réseau, lancer en hors-ligne avec le pseudo et l'UUID enregistrés.
-3. **Mise à jour d'un modpack installé** (sans perdre mondes et réglages).
-4. **Dupliquer une instance / sauvegarder ses mondes** (avant de changer de version : une rétrogradation peut corrompre un monde).
-5. **CurseForge** (clé API Overwolf).
+1. **Jouer sans Internet** : chaque lancement exige le réseau même quand tout est installé (`ensureJava` relit l'index Java de Mojang, le compte Microsoft rafraîchit son token). Garder l'index sur disque ; sans réseau, lancer en hors-ligne avec le pseudo et l'UUID enregistrés.
+2. **Mise à jour d'un modpack installé** (sans perdre mondes et réglages).
+3. **Dupliquer une instance / sauvegarder ses mondes** (avant de changer de version : une rétrogradation peut corrompre un monde).
+4. **CurseForge** (clé API Overwolf).
+
+**À examiner** (vu en récoltant les crashs) : sous NeoForge 21.1.248, la console affiche `WARN StatusConsoleListener Error parsing URI …\assets\log_configs\client-1.12.xml`. Le chemin Windows passé à `-Dlog4j.configurationFile` n'est pas une URI valide pour ce log4j : vérifier si la config de Mojang (correctif Log4Shell) est réellement appliquée sous NeoForge, et si elle l'est pour les autres loaders.
 
 ## 7. Questions en attente pour l'utilisateur
 
@@ -96,7 +114,7 @@ Les deux premières améliorations de la liste proposée à l'utilisateur (la su
 
 ```
 npm run typecheck  → OK
-npm test           → 42/42
+npm test           → 50/50
 npm run build      → OK
 ```
 

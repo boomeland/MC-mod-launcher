@@ -168,6 +168,10 @@ Les exécutables **ne sont pas signés** : au premier lancement, Windows SmartSc
 
 La config log4j de Mojang, passée au jeu parce qu'elle corrige Log4Shell sur les anciennes versions, écrit la console en XML. Le main la décode en lignes lisibles (`core/log4j.ts`). L'interface regroupe l'affichage par image et ne garde que les 200 000 derniers caractères : un modpack écrit des dizaines de milliers de lignes (le log complet est dans `logs/latest.log` de l'instance).
 
+### Diagnostic de crash
+
+À chaque fin de partie, quel que soit le code de sortie (sur un écran d'erreur, le jeu reste ouvert et le joueur le ferme normalement ou par « Arrêter »), `core/crash.ts` cherche un rapport écrit pendant la partie (`crash-reports/`, ou `hs_err_pid*.log` si Java lui-même a planté) et lit ce rapport avec les 500 dernières lignes de la console. Causes reconnues, chacune tirée d'un crash réel provoqué pour l'occasion : la solution calculée par Fabric (mod manquant), les « Failure message » de Forge / NeoForge, le manque de mémoire. À défaut, la ligne « Description » du rapport. L'interface affiche la cause au-dessus de la console, avec un bouton qui ouvre le rapport (le chemin reste dans le main).
+
 ### Instances
 
 Une **instance** est un profil : une version de Minecraft, un loader (Vanilla, Forge, NeoForge ou Fabric), une quantité de RAM et **son propre dossier de jeu**. Deux instances ne partagent donc ni leurs mods, ni leurs mondes, ni leurs `options.txt`.
@@ -208,7 +212,8 @@ src/
 │   ├── version.ts     manifest Mojang + fusion inheritsFrom
 │   ├── libraries.ts   choix des librairies selon l'OS/l'architecture
 │   ├── rules.ts       règles Mojang (allow/disallow par OS)
-│   ├── download.ts    téléchargements (SHA1, reprises, parallélisme)
+│   ├── crash.ts       diagnostic de fin de partie (rapport de crash, cause lisible)
+│   ├── download.ts    téléchargements (SHA1, reprises, parallélisme, délai)
 │   ├── install.ts     installe tout ce qu'il faut pour une version
 │   ├── java.ts        télécharge le runtime Java Mojang
 │   ├── launch.ts      construit la commande et lance le jeu
@@ -283,7 +288,8 @@ Les données sont dans le dossier `userData` d'Electron (`%APPDATA%/mc-mod-launc
 - [x] Bouton « Jouer » depuis l'interface Electron (jeu lancé, logs affichés, fin de partie détectée)
 - [x] Bouton « Arrêter » pendant la partie, pour un jeu figé (confirmation native, process tué par son PID). Vérifié dans l'app : annuler laisse le jeu tourner, forcer l'arrêt le ferme et remet « Jouer »
 - [x] Délai réseau : une requête est abandonnée après 30 s sans réponse du serveur (un téléchargement lent mais actif n'est pas coupé), au lieu de figer « Préparation… »
-- [x] Tests automatisés (42 tests) : instances (dont changement de version et arguments JVM), mods locaux (noms reçus par IPC), versions NeoForge, fichiers FTB et `.mrpack` (chemins, hôtes, zip slip), décodage des logs, délai des téléchargements
+- [x] **Diagnostic de crash** : cause lisible et bouton « Ouvrir le rapport » à la fin d'une partie ratée. Vérifié dans l'app sur NeoForge (dépendances manquantes, arrêté depuis l'écran d'erreur), Fabric (mod manquant, fenêtre d'erreur fermée) et une partie vanilla normale (aucun encadré)
+- [x] Tests automatisés (50 tests) : instances (dont changement de version et arguments JVM), mods locaux (noms reçus par IPC), versions NeoForge, fichiers FTB et `.mrpack` (chemins, hôtes, zip slip), décodage des logs, délai des téléchargements, diagnostic de crash (sur des crashs réels)
 - [x] **Gestion des mods** (onglet Mods) : liste avec noms et icônes Modrinth, activer / désactiver, supprimer, ajouter des `.jar` (bouton et glisser-déposer), recherche Modrinth avec dépendances, mises à jour. Vérifié en jeu : JEI installé depuis l'interface et chargé par NeoForge 1.21.1
 - [x] **Modpacks Modrinth** : recherche, installation, lancement. Vérifié en jeu : Fabulously Optimized 6.5.0 (Fabric 1.21.1, 151 mods chargés) installé et lancé depuis l'interface
 - [x] **Mise à jour automatique** du launcher installé (electron-updater + releases GitHub). Vérifiée de bout en bout : une 0.2.99 installée a trouvé la release 0.3.0, l'a téléchargée, installée en silence et s'est relancée en 0.3.0
